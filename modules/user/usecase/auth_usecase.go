@@ -5,6 +5,7 @@ import (
 
 	"github.com/phetployst/art-toys-store/config"
 	"github.com/phetployst/art-toys-store/modules/user/entities"
+	"gorm.io/gorm"
 )
 
 func (s *userService) CreateNewUser(user *entities.User) (*entities.UserAccount, error) {
@@ -70,4 +71,21 @@ func (s *userService) Login(loginRequest *entities.Login, config *config.Config)
 		Email:       userAccount.Email,
 		AccessToken: accessToken,
 	}, nil
+}
+
+func (s *userService) Logout(logoutRequest *entities.Logout) error {
+
+	if err := s.repo.GetUserCredentialByUserId(logoutRequest.UserID); err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+
+			return errors.New("credential not found")
+		}
+		return errors.New("internal server error")
+	}
+
+	if err := s.repo.DeleteUserCredential(logoutRequest.UserID); err != nil {
+		return errors.New("internal server error")
+	}
+
+	return nil
 }

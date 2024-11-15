@@ -10,4 +10,6 @@ type UserRepository interface {
 	GetUserAccountById(userId uint) (*entities.User, error)
 	GetUserByUsername(username string) (*entities.User, error)
 	InsertUserCredential(credential *entities.Credential) error
+	GetUserCredentialByUserId(userID uint) error
+	DeleteUserCredential(userID uint) error
 }

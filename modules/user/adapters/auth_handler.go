@@ -74,3 +74,33 @@ func (h *httpUserHandler) Login(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, userCredential)
 }
+
+func (h *httpUserHandler) Logout(c echo.Context) error {
+	logoutRequest := new(entities.Logout)
+
+	if err := c.Bind(&logoutRequest); err != nil {
+		log.Printf("failed to bind input: %v", err)
+		return c.JSON(http.StatusBadRequest, ErrorResponse{
+			Message: "Invalid request data",
+		})
+	}
+
+	err := h.usecase.Logout(logoutRequest)
+	if err != nil {
+		switch err.Error() {
+		case "credential not found":
+			return c.JSON(http.StatusNotFound, ErrorResponse{
+				Message: "User credential not found",
+			})
+		default:
+			log.Printf("unexpected error: %v", err)
+			return c.JSON(http.StatusInternalServerError, ErrorResponse{
+				Message: "Internal server error",
+			})
+		}
+	}
+
+	return c.JSON(http.StatusOK, map[string]string{
+		"message": "Logged out successfully",
+	})
+}

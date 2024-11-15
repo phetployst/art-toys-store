@@ -68,3 +68,26 @@ func (r *gormUserRepository) InsertUserCredential(credential *entities.Credentia
 
 	return nil
 }
+
+func (r *gormUserRepository) GetUserCredentialByUserId(userID uint) error {
+	credential := new(entities.Credential)
+
+	if err := r.db.Where("user_id = ? AND deleted_at IS NULL", userID).First(credential).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return err
+		}
+		return err
+	}
+
+	return nil
+}
+
+func (r *gormUserRepository) DeleteUserCredential(userID uint) error {
+	credential := new(entities.Credential)
+
+	if result := r.db.Unscoped().Where("user_id = ?", userID).Delete(credential); result.Error != nil {
+		return result.Error
+	}
+
+	return nil
+}

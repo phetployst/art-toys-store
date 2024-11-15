@@ -2,6 +2,7 @@ package adapters
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -247,6 +248,92 @@ func TestLoginHandler_auth(t *testing.T) {
 
 }
 
+func TestLogoutHandler_auth(t *testing.T) {
+	t.Run("logout successful", func(t *testing.T) {
+		mockService := new(MockUserUsecase)
+		handler := &httpUserHandler{usecase: mockService}
+
+		e := echo.New()
+		defer e.Close()
+
+		mockService.On("Logout", mock.AnythingOfType("*entities.Logout")).Return(nil)
+
+		request := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"user_id": 31}`))
+		request.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		response := httptest.NewRecorder()
+		c := e.NewContext(request, response)
+
+		err := handler.Logout(c)
+
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusOK, response.Code)
+		fmt.Println(response.Body.String())
+		assert.JSONEq(t, `{"message":"Logged out successfully"}`, response.Body.String())
+	})
+
+	t.Run("logout with invalid request data", func(t *testing.T) {
+		mockService := new(MockUserUsecase)
+		handler := &httpUserHandler{usecase: mockService}
+
+		e := echo.New()
+		defer e.Close()
+
+		request := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{1234}`))
+		request.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		response := httptest.NewRecorder()
+		c := e.NewContext(request, response)
+
+		err := handler.Logout(c)
+
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusBadRequest, response.Code)
+		assert.JSONEq(t, `{"message":"Invalid request data"}`, response.Body.String())
+	})
+
+	t.Run("logout user not found", func(t *testing.T) {
+		mockService := new(MockUserUsecase)
+		handler := &httpUserHandler{usecase: mockService}
+
+		e := echo.New()
+		defer e.Close()
+
+		mockService.On("Logout", mock.AnythingOfType("*entities.Logout")).Return(errors.New("credential not found"))
+
+		request := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"user_id": 31}`))
+		request.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		response := httptest.NewRecorder()
+		c := e.NewContext(request, response)
+
+		err := handler.Logout(c)
+
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusNotFound, response.Code)
+		assert.JSONEq(t, `{"message":"User credential not found"}`, response.Body.String())
+
+	})
+
+	t.Run("logout internal server error", func(t *testing.T) {
+		mockService := new(MockUserUsecase)
+		handler := &httpUserHandler{usecase: mockService}
+
+		e := echo.New()
+		defer e.Close()
+
+		mockService.On("Logout", mock.AnythingOfType("*entities.Logout")).Return(errors.New("internal error"))
+
+		request := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"user_id": 31}`))
+		request.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		response := httptest.NewRecorder()
+		c := e.NewContext(request, response)
+
+		err := handler.Logout(c)
+
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusInternalServerError, response.Code)
+		assert.JSONEq(t, `{"message":"Internal server error"}`, response.Body.String())
+	})
+}
+
 type MockUserUsecase struct {
 	mock.Mock
 }
@@ -259,4 +346,9 @@ func (m *MockUserUsecase) CreateNewUser(user *entities.User) (*entities.UserAcco
 func (m *MockUserUsecase) Login(loginRequest *entities.Login, config *config.Config) (*entities.UserCredential, error) {
 	args := m.Called(loginRequest, config)
 	return args.Get(0).(*entities.UserCredential), args.Error(1)
+}
+
+func (m *MockUserUsecase) Logout(logoutRequest *entities.Logout) error {
+	args := m.Called(logoutRequest)
+	return args.Error(0)
 }

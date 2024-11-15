@@ -8,6 +8,7 @@ import (
 type UserUsecase interface {
 	CreateNewUser(user *entities.User) (*entities.UserAccount, error)
 	Login(loginRequest *entities.Login, config *config.Config) (*entities.UserCredential, error)
+	Logout(logoutRequest *entities.Logout) error
 }
 
 type userService struct {

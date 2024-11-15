@@ -253,6 +253,62 @@ func TestLoginUsecase_auth(t *testing.T) {
 	})
 }
 
+func TestLogoutUsecase_auth(t *testing.T) {
+	t.Run("successfully logs out when credential is found and deleted", func(t *testing.T) {
+		mockRepo := new(MockUserRepository)
+		service := userService{repo: mockRepo}
+
+		logoutRequest := &entities.Logout{UserID: 1}
+
+		mockRepo.On("GetUserCredentialByUserId", uint(1)).Return(nil)
+		mockRepo.On("DeleteUserCredential", uint(1)).Return(nil)
+
+		err := service.Logout(logoutRequest)
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("returns 'credential not found' when credential is not found", func(t *testing.T) {
+		mockRepo := new(MockUserRepository)
+		service := userService{repo: mockRepo}
+
+		logoutRequest := &entities.Logout{UserID: 1}
+
+		mockRepo.On("GetUserCredentialByUserId", uint(1)).Return(gorm.ErrRecordNotFound)
+
+		err := service.Logout(logoutRequest)
+
+		assert.EqualError(t, err, "credential not found")
+	})
+
+	t.Run("returns 'credential not found' when credential is not found", func(t *testing.T) {
+		mockRepo := new(MockUserRepository)
+		service := userService{repo: mockRepo}
+
+		logoutRequest := &entities.Logout{UserID: 1}
+
+		mockRepo.On("GetUserCredentialByUserId", uint(1)).Return(errors.New("error"))
+
+		err := service.Logout(logoutRequest)
+
+		assert.EqualError(t, err, "internal server error")
+	})
+
+	t.Run("returns 'internal server error' when an error occurs while deleting credential", func(t *testing.T) {
+		mockRepo := new(MockUserRepository)
+		service := userService{repo: mockRepo}
+
+		logoutRequest := &entities.Logout{UserID: 1}
+
+		mockRepo.On("GetUserCredentialByUserId", uint(1)).Return(nil)
+		mockRepo.On("DeleteUserCredential", uint(1)).Return(errors.New("error"))
+
+		err := service.Logout(logoutRequest)
+
+		assert.EqualError(t, err, "internal server error")
+	})
+}
+
 type MockUserRepository struct {
 	mock.Mock
 }
@@ -284,6 +340,16 @@ func (m *MockUserRepository) GetUserByUsername(username string) (*entities.User,
 
 func (m *MockUserRepository) InsertUserCredential(credential *entities.Credential) error {
 	args := m.Called(credential)
+	return args.Error(0)
+}
+
+func (m *MockUserRepository) GetUserCredentialByUserId(userID uint) error {
+	args := m.Called(userID)
+	return args.Error(0)
+}
+
+func (m *MockUserRepository) DeleteUserCredential(userID uint) error {
+	args := m.Called(userID)
 	return args.Error(0)
 }
 

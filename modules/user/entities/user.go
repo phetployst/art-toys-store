@@ -27,6 +27,10 @@ type (
 		Password string `json:"password"`
 	}
 
+	Logout struct {
+		UserID uint `gorm:"not null;index" json:"user_id"`
+	}
+
 	Credential struct {
 		gorm.Model
 		UserID       uint   `gorm:"not null;index" json:"user_id"`           // Foreign key เชื่อมโยงกับ User
