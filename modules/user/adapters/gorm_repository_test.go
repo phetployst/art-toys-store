@@ -4,6 +4,7 @@ import (
 	"errors"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/phetployst/art-toys-store/modules/user/entities"
@@ -13,9 +14,11 @@ import (
 )
 
 const (
-	createUserQuery         = `INSERT INTO "users" ("created_at","updated_at","deleted_at","username","email","password_hash","role") VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING "id"`
-	isUniqueUserQuery       = `SELECT * FROM "users" WHERE (email = $1 OR username = $2) AND "users"."deleted_at" IS NULL ORDER BY "users"."id" LIMIT $3`
-	getUserAccountByIdQuery = `SELECT * FROM "users" WHERE "users"."id" = $1 AND "users"."deleted_at" IS NULL ORDER BY "users"."id" LIMIT $2`
+	createUserQuery               = `INSERT INTO "users" ("created_at","updated_at","deleted_at","username","email","password_hash","role") VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING "id"`
+	isUniqueUserQuery             = `SELECT * FROM "users" WHERE (email = $1 OR username = $2) AND "users"."deleted_at" IS NULL ORDER BY "users"."id" LIMIT $3`
+	getUserAccountByIdQuery       = `SELECT * FROM "users" WHERE "users"."id" = $1 AND "users"."deleted_at" IS NULL ORDER BY "users"."id" LIMIT $2`
+	getUserAccountByUsernameQuery = `SELECT * FROM "users" WHERE username = $1 AND "users"."deleted_at" IS NULL ORDER BY "users"."id" LIMIT $2`
+	insertUserCredentialQuery     = `INSERT INTO "credentials" ("created_at","updated_at","deleted_at","user_id","refresh_token","expires_at") VALUES ($1,$2,$3,$4,$5,$6) RETURNING "id"`
 )
 
 func TestCreateUser_gormRepo(t *testing.T) {
@@ -165,5 +168,123 @@ func TestGetUserAccountById_gormRepo(t *testing.T) {
 		assert.Error(t, err)
 		assert.Nil(t, user)
 		assert.EqualError(t, err, gorm.ErrRecordNotFound.Error())
+	})
+}
+
+func TestGetUserAccountByUsername_gormRepo(t *testing.T) {
+	t.Run("get user account by username given users exist in the database", func(t *testing.T) {
+		db, mock, _ := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
+		defer db.Close()
+
+		gormDB, _ := gorm.Open(postgres.New(postgres.Config{Conn: db}), &gorm.Config{})
+		repo := NewUserRepository(gormDB)
+
+		username := "phetploy"
+
+		rows := sqlmock.NewRows([]string{"id", "username", "email", "password", "role"})
+		rows.AddRow(uint(13), "phetploy", "phetploy@example.com", "password1234", "user")
+
+		mock.ExpectQuery(getUserAccountByUsernameQuery).
+			WithArgs(username, 1).
+			WillReturnRows(rows)
+
+		got, err := repo.GetUserByUsername(username)
+
+		want := &entities.User{
+			Model:    gorm.Model{ID: 13, CreatedAt: got.CreatedAt, UpdatedAt: got.UpdatedAt, DeletedAt: got.DeletedAt},
+			Username: "phetploy",
+			Email:    "phetploy@example.com",
+			Role:     "user",
+		}
+
+		assert.NoError(t, err)
+
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("got %v but want %v", got, want)
+		}
+	})
+
+	t.Run("get user by username given user does not exist", func(t *testing.T) {
+		db, mock, _ := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
+		defer db.Close()
+
+		gormDB, _ := gorm.Open(postgres.New(postgres.Config{Conn: db}), &gorm.Config{})
+		repo := NewUserRepository(gormDB)
+
+		username := "phetploy"
+
+		mock.ExpectQuery(getUserAccountByUsernameQuery).
+			WithArgs(username, 1).
+			WillReturnError(gorm.ErrRecordNotFound)
+
+		user, err := repo.GetUserByUsername(username)
+
+		assert.Error(t, err)
+		assert.Nil(t, user)
+		assert.EqualError(t, err, gorm.ErrRecordNotFound.Error())
+	})
+
+	t.Run("get user by username given database error", func(t *testing.T) {
+		db, mock, _ := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
+		defer db.Close()
+
+		gormDB, _ := gorm.Open(postgres.New(postgres.Config{Conn: db}), &gorm.Config{})
+		repo := NewUserRepository(gormDB)
+
+		username := "phetploy"
+
+		mock.ExpectQuery(getUserAccountByUsernameQuery).
+			WithArgs(username, 1).
+			WillReturnError(errors.New("database error"))
+
+		user, err := repo.GetUserByUsername(username)
+
+		assert.Error(t, err)
+		assert.Nil(t, user)
+		assert.EqualError(t, err, "database error")
+	})
+}
+
+func TestInsertUserCredential_gormRepo(t *testing.T) {
+	t.Run("insert user credential successfully", func(t *testing.T) {
+		db, mock, _ := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
+		defer db.Close()
+
+		gormDB, _ := gorm.Open(postgres.New(postgres.Config{Conn: db}), &gorm.Config{})
+		repo := NewUserRepository(gormDB)
+
+		userCredential := entities.Credential{UserID: uint(14), RefreshToken: "refreshToken1234", ExpiresAt: time.Time{}}
+
+		mock.ExpectBegin()
+		row := sqlmock.NewRows([]string{"id"}).AddRow(1)
+		mock.ExpectQuery(insertUserCredentialQuery).
+			WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), userCredential.UserID, userCredential.RefreshToken, userCredential.ExpiresAt).
+			WillReturnRows(row)
+		mock.ExpectCommit()
+
+		err := repo.InsertUserCredential(&userCredential)
+
+		assert.NoError(t, err)
+
+	})
+
+	t.Run("insert user credential given error during query", func(t *testing.T) {
+		db, mock, _ := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
+		defer db.Close()
+
+		gormDB, _ := gorm.Open(postgres.New(postgres.Config{Conn: db}), &gorm.Config{})
+		repo := NewUserRepository(gormDB)
+
+		userCredential := entities.Credential{UserID: uint(14), RefreshToken: "refreshToken1234", ExpiresAt: time.Time{}}
+
+		mock.ExpectBegin()
+		mock.ExpectQuery(insertUserCredentialQuery).
+			WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), userCredential.UserID, userCredential.RefreshToken, userCredential.ExpiresAt).
+			WillReturnError(errors.New("database error"))
+		mock.ExpectCommit()
+
+		err := repo.InsertUserCredential(&userCredential)
+
+		assert.Error(t, err)
 	})
 }

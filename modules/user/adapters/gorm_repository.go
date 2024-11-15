@@ -46,3 +46,25 @@ func (r *gormUserRepository) GetUserAccountById(userID uint) (*entities.User, er
 
 	return user, nil
 }
+
+func (r *gormUserRepository) GetUserByUsername(username string) (*entities.User, error) {
+	user := new(entities.User)
+
+	err := r.db.Where("username = ?", username).First(&user).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, err
+		}
+		return nil, err
+	}
+
+	return user, nil
+}
+
+func (r *gormUserRepository) InsertUserCredential(credential *entities.Credential) error {
+	if result := r.db.Create(&credential); result.Error != nil {
+		return result.Error
+	}
+
+	return nil
+}

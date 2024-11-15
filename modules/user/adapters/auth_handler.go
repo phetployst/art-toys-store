@@ -52,3 +52,25 @@ func (h *httpUserHandler) Register(c echo.Context) error {
 
 	return c.JSON(http.StatusCreated, userAccount)
 }
+
+func (h *httpUserHandler) Login(c echo.Context) error {
+	loginRequest := new(entities.Login)
+
+	if err := c.Bind(&loginRequest); err != nil {
+		log.Printf("failed to bind input %v", err)
+		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid request data"})
+	}
+
+	userCredential, err := h.usecase.Login(loginRequest, h.config)
+	if err != nil {
+		if err.Error() == "user not found" {
+			return c.JSON(http.StatusNotFound, ErrorResponse{Message: "User not found"})
+		}
+		if err.Error() == "invalid password" {
+			return c.JSON(http.StatusUnauthorized, ErrorResponse{Message: "Invalid password"})
+		}
+		return c.JSON(http.StatusInternalServerError, ErrorResponse{Message: "Internal server error"})
+	}
+
+	return c.JSON(http.StatusOK, userCredential)
+}

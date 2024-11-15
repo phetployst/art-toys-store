@@ -8,4 +8,6 @@ type UserRepository interface {
 	CreateUser(user *entities.User) (uint, error)
 	IsUniqueUser(email, username string) bool
 	GetUserAccountById(userId uint) (*entities.User, error)
+	GetUserByUsername(username string) (*entities.User, error)
+	InsertUserCredential(credential *entities.Credential) error
 }

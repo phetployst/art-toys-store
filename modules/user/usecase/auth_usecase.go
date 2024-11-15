@@ -3,6 +3,7 @@ package usecase
 import (
 	"errors"
 
+	"github.com/phetployst/art-toys-store/config"
 	"github.com/phetployst/art-toys-store/modules/user/entities"
 )
 
@@ -36,4 +37,37 @@ func (s *userService) CreateNewUser(user *entities.User) (*entities.UserAccount,
 
 	return userAccount, nil
 
+}
+
+func (s *userService) Login(loginRequest *entities.Login, config *config.Config) (*entities.UserCredential, error) {
+
+	userAccount, err := s.repo.GetUserByUsername(loginRequest.Username)
+	if err != nil {
+		return nil, errors.New("user not found")
+	}
+
+	if err := s.utils.CheckPassword(userAccount.PasswordHash, loginRequest.Password); err != nil {
+		return nil, errors.New("invalid password")
+	}
+
+	accessToken, err := s.utils.GenerateJWT(userAccount.ID, userAccount.Username, userAccount.Role, config)
+	if err != nil {
+		return nil, errors.New("internal server error")
+	}
+
+	refreshToken, refreshTokenExpiry, err := s.utils.GenerateRefreshToken(userAccount.ID, userAccount.Username, userAccount.Role, config)
+	if err != nil {
+		return nil, errors.New("internal server error")
+	}
+
+	if err := s.utils.SaveUserCredentials(userAccount.ID, refreshToken, refreshTokenExpiry); err != nil {
+		return nil, errors.New("internal server error")
+	}
+
+	return &entities.UserCredential{
+		UserID:      userAccount.ID,
+		Username:    userAccount.Username,
+		Email:       userAccount.Email,
+		AccessToken: accessToken,
+	}, nil
 }

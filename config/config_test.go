@@ -79,6 +79,8 @@ func TestGetConfig(t *testing.T) {
 			"HOSTNAME":             "localhost",
 			"PORT":                 "5000",
 			"DB_CONNECTION_STRING": "db://localhost:5432",
+			"JWT_ACCESS_SECRET":    "secret",
+			"JWT_REFRESH_SECRET":   "it_is_a_secret",
 		}
 		configProvider := ConfigProvider{Getter: envGetter}
 		config := configProvider.GetConfig()
@@ -91,6 +93,10 @@ func TestGetConfig(t *testing.T) {
 				Hostname:           "localhost",
 				Port:               5000,
 				DBConnectionString: "db://localhost:5432",
+			},
+			Jwt: Jwt{
+				AccessTokenSecret:  "secret",
+				RefreshTokenSecret: "it_is_a_secret",
 			},
 		}
 
@@ -112,6 +118,10 @@ func TestGetConfig(t *testing.T) {
 				Hostname:           "localhost",
 				Port:               0,
 				DBConnectionString: "",
+			},
+			Jwt: Jwt{
+				AccessTokenSecret:  "",
+				RefreshTokenSecret: "",
 			},
 		}
 

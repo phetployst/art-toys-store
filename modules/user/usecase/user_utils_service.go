@@ -1,6 +1,10 @@
 package usecase
 
 import (
+	"time"
+
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/phetployst/art-toys-store/config"
 	"github.com/phetployst/art-toys-store/modules/user/entities"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -8,6 +12,10 @@ import (
 type UserUtilsService interface {
 	HashedPassword(password string) ([]byte, error)
 	GetUserAccountById(userID uint) (*entities.UserAccount, error)
+	CheckPassword(hashedPassword, inputPassword string) error
+	GenerateJWT(userID uint, username, role string, config *config.Config) (string, error) //for login
+	GenerateRefreshToken(userID uint, username, role string, config *config.Config) (string, time.Time, error)
+	SaveUserCredentials(userID uint, refreshToken string, expiresAt time.Time) error
 }
 
 type userUtils struct {
@@ -39,4 +47,76 @@ func (h *userUtils) GetUserAccountById(userID uint) (*entities.UserAccount, erro
 	}
 
 	return userAccount, nil
+}
+
+func (h *userUtils) CheckPassword(hashedPassword, inputPassword string) error {
+	err := bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(inputPassword))
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+type JwtCustomClaims struct {
+	UserID   uint   `json:"user_id"`
+	Username string `json:"username"`
+	Role     string `json:"role"`
+	Type     string `json:"type"`
+	jwt.RegisteredClaims
+}
+
+func (h *userUtils) GenerateJWT(userID uint, username, role string, config *config.Config) (string, error) {
+
+	claims := &JwtCustomClaims{
+		UserID:   userID,
+		Username: username,
+		Role:     role,
+		Type:     "access",
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(5 * time.Minute)),
+		},
+	}
+
+	accessToken := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+
+	accessTokenString, err := accessToken.SignedString([]byte(config.Jwt.AccessTokenSecret))
+	if err != nil {
+		return "", err
+	}
+
+	return accessTokenString, nil
+}
+
+func (h *userUtils) GenerateRefreshToken(userID uint, username, role string, config *config.Config) (string, time.Time, error) {
+
+	refreshTokenClaims := &JwtCustomClaims{
+		UserID:   userID,
+		Username: username,
+		Role:     role,
+		Type:     "refresh",
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
+		},
+	}
+	refreshToken := jwt.NewWithClaims(jwt.SigningMethodHS256, refreshTokenClaims)
+	refreshTokenString, err := refreshToken.SignedString([]byte(config.Jwt.RefreshTokenSecret))
+	if err != nil {
+		return "", time.Time{}, err
+	}
+
+	return refreshTokenString, refreshTokenClaims.ExpiresAt.Time, nil
+}
+
+func (s *userUtils) SaveUserCredentials(userID uint, refreshToken string, expiresAt time.Time) error {
+	credential := &entities.Credential{
+		UserID:       userID,
+		RefreshToken: refreshToken,
+		ExpiresAt:    expiresAt,
+	}
+
+	if err := s.repo.InsertUserCredential(credential); err != nil {
+		return err
+	}
+
+	return nil
 }

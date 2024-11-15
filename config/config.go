@@ -22,6 +22,7 @@ type (
 	Config struct {
 		Environment string
 		Server      Server
+		Jwt         Jwt
 	}
 
 	Server struct {
@@ -29,6 +30,11 @@ type (
 		Hostname           string
 		Port               int
 		DBConnectionString string
+	}
+
+	Jwt struct {
+		AccessTokenSecret  string
+		RefreshTokenSecret string
 	}
 )
 
@@ -70,6 +76,10 @@ func (c *ConfigProvider) GetConfig() Config {
 			Hostname:           c.GetStringEnv("HOSTNAME", "localhost"),
 			Port:               c.GetIntEnv("PORT", 0),
 			DBConnectionString: c.GetStringEnv("DB_CONNECTION_STRING", ""),
+		},
+		Jwt: Jwt{
+			AccessTokenSecret:  c.GetStringEnv("JWT_ACCESS_SECRET", ""),
+			RefreshTokenSecret: c.GetStringEnv("JWT_REFRESH_SECRET", ""),
 		},
 	}
 }
