@@ -21,6 +21,7 @@ const (
 	insertUserCredentialQuery      = `INSERT INTO "credentials" ("created_at","updated_at","deleted_at","user_id","refresh_token","expires_at") VALUES ($1,$2,$3,$4,$5,$6) RETURNING "id"`
 	getUserCredentialByUserIdQuery = `SELECT * FROM "credentials" WHERE (user_id = $1 AND deleted_at IS NULL) AND "credentials"."deleted_at" IS NULL ORDER BY "credentials"."id" LIMIT $2`
 	deleteUserCredentialQuery      = `DELETE FROM "credentials" WHERE user_id = $1`
+	getRefreshTokenByUserIDQuery   = `SELECT * FROM "credentials" WHERE user_id = $1 AND "credentials"."deleted_at" IS NULL ORDER BY created_at DESC,"credentials"."id" LIMIT $2`
 )
 
 func TestCreateUser_gormRepo(t *testing.T) {
@@ -394,5 +395,70 @@ func TestDeleteUserCredential_gormRepo(t *testing.T) {
 		err := repo.DeleteUserCredential(userID)
 
 		assert.Error(t, err)
+	})
+}
+
+func TestGetRefreshTokenByUserID(t *testing.T) {
+	t.Run("get refresh token by user ID when record exists", func(t *testing.T) {
+		db, mock, _ := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
+		defer db.Close()
+
+		gormDB, _ := gorm.Open(postgres.New(postgres.Config{Conn: db}), &gorm.Config{})
+		repo := NewUserRepository(gormDB)
+
+		userID := uint(14)
+		expectedToken := "sample_refresh_token"
+
+		rows := sqlmock.NewRows([]string{"user_id", "refresh_token", "created_at"}).
+			AddRow(userID, expectedToken, time.Now())
+
+		mock.ExpectQuery(getRefreshTokenByUserIDQuery).
+			WithArgs(userID, 1).
+			WillReturnRows(rows)
+
+		token, err := repo.GetRefreshTokenByUserID(userID)
+
+		assert.NoError(t, err)
+		assert.Equal(t, expectedToken, token)
+	})
+
+	t.Run("get refresh token by user ID when record does not exist", func(t *testing.T) {
+		db, mock, _ := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
+		defer db.Close()
+
+		gormDB, _ := gorm.Open(postgres.New(postgres.Config{Conn: db}), &gorm.Config{})
+		repo := NewUserRepository(gormDB)
+
+		userID := uint(14)
+
+		mock.ExpectQuery(getRefreshTokenByUserIDQuery).
+			WithArgs(userID, 1).
+			WillReturnError(gorm.ErrRecordNotFound)
+
+		token, err := repo.GetRefreshTokenByUserID(userID)
+
+		assert.Error(t, err)
+		assert.Equal(t, "", token)
+		assert.True(t, errors.Is(err, gorm.ErrRecordNotFound))
+	})
+
+	t.Run("get refresh token by user ID when query fails", func(t *testing.T) {
+		db, mock, _ := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
+		defer db.Close()
+
+		gormDB, _ := gorm.Open(postgres.New(postgres.Config{Conn: db}), &gorm.Config{})
+		repo := NewUserRepository(gormDB)
+
+		userID := uint(14)
+
+		mock.ExpectQuery(getRefreshTokenByUserIDQuery).
+			WithArgs(userID, 1).
+			WillReturnError(errors.New("database error"))
+
+		token, err := repo.GetRefreshTokenByUserID(userID)
+
+		assert.Error(t, err)
+		assert.Equal(t, "", token)
+		assert.EqualError(t, err, "database error")
 	})
 }

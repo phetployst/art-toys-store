@@ -91,3 +91,20 @@ func (r *gormUserRepository) DeleteUserCredential(userID uint) error {
 
 	return nil
 }
+
+func (r *gormUserRepository) GetRefreshTokenByUserID(userID uint) (string, error) {
+	credential := new(entities.Credential)
+
+	if err := r.db.Where("user_id = ?", userID).
+		Order("created_at DESC").
+		First(&credential).Error; err != nil {
+
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return "", err
+		}
+
+		return "", err
+	}
+
+	return credential.RefreshToken, nil
+}

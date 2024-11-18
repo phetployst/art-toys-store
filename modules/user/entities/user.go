@@ -31,6 +31,10 @@ type (
 		UserID uint `gorm:"not null;index" json:"user_id"`
 	}
 
+	Refresh struct {
+		UserID uint `gorm:"not null;index" json:"user_id"`
+	}
+
 	Credential struct {
 		gorm.Model
 		UserID       uint   `gorm:"not null;index" json:"user_id"`           // Foreign key เชื่อมโยงกับ User
@@ -41,7 +45,7 @@ type (
 	UserCredential struct {
 		UserID      uint   `json:"user_id"`
 		Username    string `json:"username"`
-		Email       string `json:"email"`
+		Role        string `json:"role"`
 		AccessToken string `gorm:"type:text;not null" json:"access_token"`
 	}
 )

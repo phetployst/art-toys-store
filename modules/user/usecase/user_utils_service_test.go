@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/phetployst/art-toys-store/config"
 	"github.com/phetployst/art-toys-store/modules/user/entities"
 	"github.com/stretchr/testify/assert"
@@ -188,5 +189,131 @@ func TestSaveUserCredentials_utils(t *testing.T) {
 
 		assert.Error(t, err)
 		mockRepo.AssertExpectations(t)
+	})
+}
+
+func TestParseAndValidateToken_utils(t *testing.T) {
+
+	t.Run("valid token", func(t *testing.T) {
+		utils := &userUtils{}
+
+		secret := "testSecret"
+		expectedType := "refresh"
+
+		claims := &JwtCustomClaims{
+			UserID:   uint(1),
+			Username: "phetploy",
+			Role:     "user",
+			Type:     expectedType,
+			RegisteredClaims: jwt.RegisteredClaims{
+				ExpiresAt: jwt.NewNumericDate(time.Now().Add(5 * time.Minute)),
+			},
+		}
+		token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+		tokenString, _ := token.SignedString([]byte(secret))
+
+		got, err := utils.ParseAndValidateToken(tokenString, secret, expectedType)
+
+		want := &JwtCustomClaims{
+			UserID:   uint(1),
+			Username: "phetploy",
+			Role:     "user",
+			Type:     "refresh",
+			RegisteredClaims: jwt.RegisteredClaims{
+				ExpiresAt: got.RegisteredClaims.ExpiresAt,
+			},
+		}
+
+		assert.NoError(t, err)
+
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("got %v but want %v", got, want)
+		}
+	})
+
+	t.Run("invalid token format", func(t *testing.T) {
+		utils := &userUtils{}
+
+		secret := "testSecret"
+		expectedType := "refresh"
+
+		tokenString := "invalid.token.string"
+
+		parsedClaims, err := utils.ParseAndValidateToken(tokenString, secret, expectedType)
+
+		assert.Error(t, err)
+		assert.Nil(t, parsedClaims)
+	})
+
+	t.Run("incorrect secret", func(t *testing.T) {
+		utils := &userUtils{}
+
+		secret := "testSecret"
+		expectedType := "refresh"
+
+		claims := &JwtCustomClaims{
+			UserID:   uint(12),
+			Username: "phetploy",
+			Role:     "user",
+			Type:     expectedType,
+			RegisteredClaims: jwt.RegisteredClaims{
+				ExpiresAt: jwt.NewNumericDate(time.Now().Add(5 * time.Minute)),
+			},
+		}
+		token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+		tokenString, _ := token.SignedString([]byte("wrongSecret"))
+
+		parsedClaims, err := utils.ParseAndValidateToken(tokenString, secret, expectedType)
+
+		assert.Error(t, err)
+		assert.Nil(t, parsedClaims)
+	})
+
+	t.Run("unexpected token type", func(t *testing.T) {
+		utils := &userUtils{}
+
+		secret := "testSecret"
+		expectedType := "refresh"
+
+		claims := &JwtCustomClaims{
+			UserID:   uint(13),
+			Username: "phetploy",
+			Role:     "user",
+			Type:     "refresh",
+			RegisteredClaims: jwt.RegisteredClaims{
+				ExpiresAt: jwt.NewNumericDate(time.Now().Add(5 * time.Minute)),
+			},
+		}
+		token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+		tokenString, _ := token.SignedString(secret)
+
+		parsedClaims, err := utils.ParseAndValidateToken(tokenString, secret, expectedType)
+
+		assert.Error(t, err)
+		assert.Nil(t, parsedClaims)
+	})
+
+	t.Run("expired token", func(t *testing.T) {
+		utils := &userUtils{}
+
+		secret := "testSecret"
+		expectedType := "refresh"
+
+		claims := &JwtCustomClaims{
+			UserID:   uint(13),
+			Username: "phetploy",
+			Role:     "user",
+			Type:     expectedType,
+			RegisteredClaims: jwt.RegisteredClaims{
+				ExpiresAt: jwt.NewNumericDate(time.Now().Add(-5 * time.Minute)), // Expired
+			},
+		}
+		token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+		tokenString, _ := token.SignedString([]byte(secret))
+
+		parsedClaims, err := utils.ParseAndValidateToken(tokenString, secret, expectedType)
+
+		assert.Error(t, err)
+		assert.Nil(t, parsedClaims)
 	})
 }

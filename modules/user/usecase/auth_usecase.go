@@ -68,7 +68,7 @@ func (s *userService) Login(loginRequest *entities.Login, config *config.Config)
 	return &entities.UserCredential{
 		UserID:      userAccount.ID,
 		Username:    userAccount.Username,
-		Email:       userAccount.Email,
+		Role:        userAccount.Role,
 		AccessToken: accessToken,
 	}, nil
 }
@@ -88,4 +88,33 @@ func (s *userService) Logout(logoutRequest *entities.Logout) error {
 	}
 
 	return nil
+}
+
+func (s *userService) Refresh(userID *entities.Refresh, config *config.Config) (*entities.UserCredential, error) {
+
+	refreshTokenString, err := s.repo.GetRefreshTokenByUserID(userID.UserID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+
+			return nil, errors.New("credential not found")
+		}
+		return nil, errors.New("internal server error")
+	}
+
+	claims, err := s.utils.ParseAndValidateToken(refreshTokenString, config.Jwt.RefreshTokenSecret, "refresh")
+	if err != nil {
+		return nil, errors.New("invalid token")
+	}
+
+	newAccessToken, err := s.utils.GenerateJWT(claims.UserID, claims.Username, claims.Role, config)
+	if err != nil {
+		return nil, errors.New("internal server error")
+	}
+
+	return &entities.UserCredential{
+		UserID:      claims.UserID,
+		Username:    claims.Username,
+		Role:        claims.Role,
+		AccessToken: newAccessToken,
+	}, nil
 }

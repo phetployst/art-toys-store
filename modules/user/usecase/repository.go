@@ -12,4 +12,5 @@ type UserRepository interface {
 	InsertUserCredential(credential *entities.Credential) error
 	GetUserCredentialByUserId(userID uint) error
 	DeleteUserCredential(userID uint) error
+	GetRefreshTokenByUserID(userID uint) (string, error)
 }

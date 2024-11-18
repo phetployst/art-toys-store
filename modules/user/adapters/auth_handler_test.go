@@ -138,7 +138,7 @@ func TestLoginHandler_auth(t *testing.T) {
 			Return(&entities.UserCredential{
 				UserID:      1,
 				Username:    "phetploy",
-				Email:       "phetploy@example.com",
+				Role:        "user",
 				AccessToken: "access_token",
 			}, nil)
 
@@ -148,7 +148,7 @@ func TestLoginHandler_auth(t *testing.T) {
 		response := httptest.NewRecorder()
 		c := e.NewContext(request, response)
 
-		expectedResponse := `{"access_token":"access_token", "email":"phetploy@example.com", "user_id":1, "username":"phetploy"}`
+		expectedResponse := `{"access_token":"access_token", "role":"user", "user_id":1, "username":"phetploy"}`
 
 		err := handler.Login(c)
 
@@ -334,6 +334,122 @@ func TestLogoutHandler_auth(t *testing.T) {
 	})
 }
 
+func TestRefreshHandler_auth(t *testing.T) {
+	t.Run("refresh successful", func(t *testing.T) {
+		mockService := new(MockUserUsecase)
+		handler := &httpUserHandler{usecase: mockService, config: &config.Config{}}
+
+		e := echo.New()
+		defer e.Close()
+
+		mockService.On("Refresh", mock.AnythingOfType("*entities.Refresh"), mock.AnythingOfType("*config.Config")).
+			Return(&entities.UserCredential{
+				UserID:      uint(13),
+				Username:    "phetploy",
+				Role:        "user",
+				AccessToken: "newAccessToken",
+			}, nil)
+
+		request := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"user_id":13}`))
+		request.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		response := httptest.NewRecorder()
+		c := e.NewContext(request, response)
+
+		expectedResponse := `{"user_id":13, "username":"phetploy", "role":"user", "access_token":"newAccessToken"}`
+
+		err := handler.Refresh(c)
+
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusOK, response.Code)
+		assert.JSONEq(t, expectedResponse, response.Body.String())
+	})
+
+	t.Run("refresh with invalid request data", func(t *testing.T) {
+		mockService := new(MockUserUsecase)
+		handler := &httpUserHandler{usecase: mockService, config: &config.Config{}}
+
+		e := echo.New()
+		defer e.Close()
+
+		request := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{1234}`))
+		request.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		response := httptest.NewRecorder()
+		c := e.NewContext(request, response)
+
+		err := handler.Refresh(c)
+
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusBadRequest, response.Code)
+		assert.JSONEq(t, `{"message":"Invalid request data"}`, response.Body.String())
+	})
+
+	t.Run("refresh credential not found", func(t *testing.T) {
+		mockService := new(MockUserUsecase)
+		handler := &httpUserHandler{usecase: mockService, config: &config.Config{}}
+
+		e := echo.New()
+		defer e.Close()
+
+		mockService.On("Refresh", mock.AnythingOfType("*entities.Refresh"), mock.AnythingOfType("*config.Config")).
+			Return((*entities.UserCredential)(nil), errors.New("credential not found"))
+
+		request := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"user_id":1}`))
+		request.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		response := httptest.NewRecorder()
+		c := e.NewContext(request, response)
+
+		err := handler.Refresh(c)
+
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusNotFound, response.Code)
+		assert.JSONEq(t, `{"message":"User credential not found"}`, response.Body.String())
+	})
+
+	t.Run("refresh invalid token", func(t *testing.T) {
+		mockService := new(MockUserUsecase)
+		handler := &httpUserHandler{usecase: mockService, config: &config.Config{}}
+
+		e := echo.New()
+		defer e.Close()
+
+		mockService.On("Refresh", mock.AnythingOfType("*entities.Refresh"), mock.AnythingOfType("*config.Config")).
+			Return((*entities.UserCredential)(nil), errors.New("invalid token"))
+
+		request := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"user_id":1}`))
+		request.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		response := httptest.NewRecorder()
+		c := e.NewContext(request, response)
+
+		err := handler.Refresh(c)
+
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusUnauthorized, response.Code)
+		assert.JSONEq(t, `{"message":"invalid token"}`, response.Body.String())
+	})
+
+	t.Run("refresh internal server error", func(t *testing.T) {
+		mockService := new(MockUserUsecase)
+		handler := &httpUserHandler{usecase: mockService, config: &config.Config{}}
+
+		e := echo.New()
+		defer e.Close()
+
+		mockService.On("Refresh", mock.AnythingOfType("*entities.Refresh"), mock.AnythingOfType("*config.Config")).
+			Return((*entities.UserCredential)(nil), errors.New("some internal error"))
+
+		request := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"user_id":1}`))
+		request.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		response := httptest.NewRecorder()
+		c := e.NewContext(request, response)
+
+		err := handler.Refresh(c)
+
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusInternalServerError, response.Code)
+		assert.JSONEq(t, `{"message":"Internal server error"}`, response.Body.String())
+	})
+}
+
 type MockUserUsecase struct {
 	mock.Mock
 }
@@ -351,4 +467,9 @@ func (m *MockUserUsecase) Login(loginRequest *entities.Login, config *config.Con
 func (m *MockUserUsecase) Logout(logoutRequest *entities.Logout) error {
 	args := m.Called(logoutRequest)
 	return args.Error(0)
+}
+
+func (m *MockUserUsecase) Refresh(refreshRequest *entities.Refresh, config *config.Config) (*entities.UserCredential, error) {
+	args := m.Called(refreshRequest, config)
+	return args.Get(0).(*entities.UserCredential), args.Error(1)
 }

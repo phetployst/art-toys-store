@@ -9,6 +9,7 @@ type UserUsecase interface {
 	CreateNewUser(user *entities.User) (*entities.UserAccount, error)
 	Login(loginRequest *entities.Login, config *config.Config) (*entities.UserCredential, error)
 	Logout(logoutRequest *entities.Logout) error
+	Refresh(userID *entities.Refresh, config *config.Config) (*entities.UserCredential, error)
 }
 
 type userService struct {
