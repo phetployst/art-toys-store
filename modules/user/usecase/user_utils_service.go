@@ -16,7 +16,7 @@ type UserUtilsService interface {
 	GenerateJWT(userID uint, username, role string, config *config.Config) (string, error)
 	GenerateRefreshToken(userID uint, username, role string, config *config.Config) (string, time.Time, error)
 	SaveUserCredentials(userID uint, refreshToken string, expiresAt time.Time) error
-	ParseAndValidateToken(tokenString, secret, expectedType string) (*JwtCustomClaims, error)
+	ParseAndValidateToken(tokenString, secret, expectedType string) (*entities.JwtCustomClaims, error)
 }
 
 type userUtils struct {
@@ -58,17 +58,9 @@ func (h *userUtils) CheckPassword(hashedPassword, inputPassword string) error {
 	return nil
 }
 
-type JwtCustomClaims struct {
-	UserID   uint   `json:"user_id"`
-	Username string `json:"username"`
-	Role     string `json:"role"`
-	Type     string `json:"type"`
-	jwt.RegisteredClaims
-}
-
 func (h *userUtils) GenerateJWT(userID uint, username, role string, config *config.Config) (string, error) {
 
-	claims := &JwtCustomClaims{
+	claims := &entities.JwtCustomClaims{
 		UserID:   userID,
 		Username: username,
 		Role:     role,
@@ -90,7 +82,7 @@ func (h *userUtils) GenerateJWT(userID uint, username, role string, config *conf
 
 func (h *userUtils) GenerateRefreshToken(userID uint, username, role string, config *config.Config) (string, time.Time, error) {
 
-	refreshTokenClaims := &JwtCustomClaims{
+	refreshTokenClaims := &entities.JwtCustomClaims{
 		UserID:   userID,
 		Username: username,
 		Role:     role,
@@ -122,8 +114,8 @@ func (h *userUtils) SaveUserCredentials(userID uint, refreshToken string, expire
 	return nil
 }
 
-func (h *userUtils) ParseAndValidateToken(tokenString, secret, expectedType string) (*JwtCustomClaims, error) {
-	token, err := jwt.ParseWithClaims(tokenString, &JwtCustomClaims{}, func(token *jwt.Token) (interface{}, error) {
+func (h *userUtils) ParseAndValidateToken(tokenString, secret, expectedType string) (*entities.JwtCustomClaims, error) {
+	token, err := jwt.ParseWithClaims(tokenString, &entities.JwtCustomClaims{}, func(token *jwt.Token) (interface{}, error) {
 		return []byte(secret), nil
 	})
 
@@ -131,7 +123,7 @@ func (h *userUtils) ParseAndValidateToken(tokenString, secret, expectedType stri
 		return nil, err
 	}
 
-	claims, ok := token.Claims.(*JwtCustomClaims)
+	claims, ok := token.Claims.(*entities.JwtCustomClaims)
 	if !ok || !token.Valid || claims.Type != expectedType {
 		return nil, err
 	}

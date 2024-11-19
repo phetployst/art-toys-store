@@ -200,7 +200,7 @@ func TestParseAndValidateToken_utils(t *testing.T) {
 		secret := "testSecret"
 		expectedType := "refresh"
 
-		claims := &JwtCustomClaims{
+		claims := &entities.JwtCustomClaims{
 			UserID:   uint(1),
 			Username: "phetploy",
 			Role:     "user",
@@ -214,7 +214,7 @@ func TestParseAndValidateToken_utils(t *testing.T) {
 
 		got, err := utils.ParseAndValidateToken(tokenString, secret, expectedType)
 
-		want := &JwtCustomClaims{
+		want := &entities.JwtCustomClaims{
 			UserID:   uint(1),
 			Username: "phetploy",
 			Role:     "user",
@@ -251,7 +251,7 @@ func TestParseAndValidateToken_utils(t *testing.T) {
 		secret := "testSecret"
 		expectedType := "refresh"
 
-		claims := &JwtCustomClaims{
+		claims := &entities.JwtCustomClaims{
 			UserID:   uint(12),
 			Username: "phetploy",
 			Role:     "user",
@@ -275,7 +275,7 @@ func TestParseAndValidateToken_utils(t *testing.T) {
 		secret := "testSecret"
 		expectedType := "refresh"
 
-		claims := &JwtCustomClaims{
+		claims := &entities.JwtCustomClaims{
 			UserID:   uint(13),
 			Username: "phetploy",
 			Role:     "user",
@@ -299,7 +299,7 @@ func TestParseAndValidateToken_utils(t *testing.T) {
 		secret := "testSecret"
 		expectedType := "refresh"
 
-		claims := &JwtCustomClaims{
+		claims := &entities.JwtCustomClaims{
 			UserID:   uint(13),
 			Username: "phetploy",
 			Role:     "user",

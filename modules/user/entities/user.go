@@ -3,6 +3,7 @@ package entities
 import (
 	"time"
 
+	"github.com/golang-jwt/jwt/v5"
 	"gorm.io/gorm"
 )
 
@@ -37,8 +38,8 @@ type (
 
 	Credential struct {
 		gorm.Model
-		UserID       uint   `gorm:"not null;index" json:"user_id"`           // Foreign key เชื่อมโยงกับ User
-		RefreshToken string `gorm:"type:text;not null" json:"refresh_token"` // Refresh token
+		UserID       uint   `gorm:"not null;index" json:"user_id"`
+		RefreshToken string `gorm:"type:text;not null" json:"refresh_token"`
 		ExpiresAt    time.Time
 	}
 
@@ -47,5 +48,13 @@ type (
 		Username    string `json:"username"`
 		Role        string `json:"role"`
 		AccessToken string `gorm:"type:text;not null" json:"access_token"`
+	}
+
+	JwtCustomClaims struct {
+		UserID   uint   `json:"user_id"`
+		Username string `json:"username"`
+		Role     string `json:"role"`
+		Type     string `json:"type"`
+		jwt.RegisteredClaims
 	}
 )

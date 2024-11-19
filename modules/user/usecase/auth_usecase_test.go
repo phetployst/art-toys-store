@@ -320,7 +320,7 @@ func TestUserService_Refresh(t *testing.T) {
 
 		userID := &entities.Refresh{UserID: uint(13)}
 		refreshToken := "validRefreshToken"
-		claims := &JwtCustomClaims{UserID: uint(13), Username: "tonytonychopper", Role: "user", Type: "refresh"}
+		claims := &entities.JwtCustomClaims{UserID: uint(13), Username: "tonytonychopper", Role: "user", Type: "refresh"}
 
 		mockRepo.On("GetRefreshTokenByUserID", userID.UserID).Return(refreshToken, nil)
 		mockUtils.On("ParseAndValidateToken", refreshToken, config.Jwt.RefreshTokenSecret, "refresh").Return(claims, nil)
@@ -387,7 +387,7 @@ func TestUserService_Refresh(t *testing.T) {
 		userID := &entities.Refresh{UserID: uint(13)}
 		refreshToken := "invalidRefreshToken"
 		mockRepo.On("GetRefreshTokenByUserID", userID.UserID).Return(refreshToken, nil)
-		mockUtils.On("ParseAndValidateToken", refreshToken, config.Jwt.RefreshTokenSecret, "refresh").Return((*JwtCustomClaims)(nil), errors.New("token invalid"))
+		mockUtils.On("ParseAndValidateToken", refreshToken, config.Jwt.RefreshTokenSecret, "refresh").Return((*entities.JwtCustomClaims)(nil), errors.New("token invalid"))
 
 		result, err := userService.Refresh(userID, config)
 
@@ -408,7 +408,7 @@ func TestUserService_Refresh(t *testing.T) {
 
 		userID := &entities.Refresh{UserID: uint(13)}
 		refreshToken := "validRefreshToken"
-		claims := &JwtCustomClaims{UserID: uint(13), Username: "phetploy", Role: "user", Type: "refresh"}
+		claims := &entities.JwtCustomClaims{UserID: uint(13), Username: "phetploy", Role: "user", Type: "refresh"}
 		mockRepo.On("GetRefreshTokenByUserID", userID.UserID).Return(refreshToken, nil)
 		mockUtils.On("ParseAndValidateToken", refreshToken, config.Jwt.RefreshTokenSecret, "refresh").Return(claims, nil)
 		mockUtils.On("GenerateJWT", claims.UserID, claims.Username, claims.Role, config).Return("", errors.New("jwt error"))
@@ -507,7 +507,7 @@ func (m *MockUserUtilsService) SaveUserCredentials(userID uint, refreshToken str
 	return args.Error(0)
 }
 
-func (m *MockUserUtilsService) ParseAndValidateToken(tokenString, secret, expectedType string) (*JwtCustomClaims, error) {
+func (m *MockUserUtilsService) ParseAndValidateToken(tokenString, secret, expectedType string) (*entities.JwtCustomClaims, error) {
 	args := m.Called(tokenString, secret, expectedType)
-	return args.Get(0).(*JwtCustomClaims), args.Error(1)
+	return args.Get(0).(*entities.JwtCustomClaims), args.Error(1)
 }
