@@ -475,6 +475,11 @@ func (m *MockUserRepository) GetUserProfileByID(userID string) (*entities.UserPr
 	return args.Get(0).(*entities.UserProfile), args.Error(1)
 }
 
+func (m *MockUserRepository) UpdateUserProfile(userProfile *entities.UserProfile) (*entities.UserProfile, error) {
+	args := m.Called(userProfile)
+	return args.Get(0).(*entities.UserProfile), args.Error(1)
+}
+
 type MockUserUtilsService struct {
 	mock.Mock
 }

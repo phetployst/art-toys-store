@@ -14,6 +14,7 @@ type UserUsecase interface {
 	Logout(logoutRequest *entities.Logout) error
 	Refresh(userID *entities.Refresh, config *config.Config) (*entities.UserCredential, error)
 	GetUserProfile(userID string) (*entities.UserProfileResponse, error)
+	UpdateUserProfile(userProfile *entities.UserProfile) (*entities.UserProfileResponse, error)
 }
 
 type userService struct {
@@ -43,5 +44,23 @@ func (s *userService) GetUserProfile(userID string) (*entities.UserProfileRespon
 		Email:             userProfile.Email,
 		Address:           userProfile.Address,
 		ProfilePictureURL: userProfile.ProfilePictureURL,
+	}, nil
+}
+
+func (s *userService) UpdateUserProfile(userProfile *entities.UserProfile) (*entities.UserProfileResponse, error) {
+
+	userProfileUpdate, err := s.repo.UpdateUserProfile(userProfile)
+	if err != nil {
+		return nil, errors.New("internal server error")
+	}
+
+	return &entities.UserProfileResponse{
+		UserID:            userProfileUpdate.UserID,
+		Username:          userProfileUpdate.Username,
+		FirstName:         userProfileUpdate.FirstName,
+		LastName:          userProfileUpdate.LastName,
+		Email:             userProfileUpdate.Email,
+		Address:           userProfileUpdate.Address,
+		ProfilePictureURL: userProfileUpdate.ProfilePictureURL,
 	}, nil
 }

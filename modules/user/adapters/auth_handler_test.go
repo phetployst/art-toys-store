@@ -478,3 +478,8 @@ func (m *MockUserUsecase) GetUserProfile(userID string) (*entities.UserProfileRe
 	args := m.Called(userID)
 	return args.Get(0).(*entities.UserProfileResponse), args.Error(1)
 }
+
+func (m *MockUserUsecase) UpdateUserProfile(userProfile *entities.UserProfile) (*entities.UserProfileResponse, error) {
+	args := m.Called(userProfile)
+	return args.Get(0).(*entities.UserProfileResponse), args.Error(1)
+}

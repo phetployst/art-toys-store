@@ -121,3 +121,12 @@ func (r *gormUserRepository) GetUserProfileByID(userID string) (*entities.UserPr
 
 	return userProfile, nil
 }
+
+func (r *gormUserRepository) UpdateUserProfile(userProfile *entities.UserProfile) (*entities.UserProfile, error) {
+	if result := r.db.Model(&entities.UserProfile{}).
+		Where("user_id = ?", userProfile.UserID).
+		Updates(userProfile); result.Error != nil {
+		return nil, result.Error
+	}
+	return userProfile, nil
+}
