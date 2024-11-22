@@ -13,4 +13,5 @@ type UserRepository interface {
 	GetUserCredentialByUserId(userID uint) error
 	DeleteUserCredential(userID uint) error
 	GetRefreshTokenByUserID(userID uint) (string, error)
+	GetUserProfileByID(userID string) (*entities.UserProfile, error)
 }

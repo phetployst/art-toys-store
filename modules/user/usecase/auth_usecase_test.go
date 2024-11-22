@@ -309,7 +309,7 @@ func TestLogoutUsecase_auth(t *testing.T) {
 	})
 }
 
-func TestUserService_Refresh(t *testing.T) {
+func TestRefresh_auth(t *testing.T) {
 
 	t.Run("refresh successful", func(t *testing.T) {
 		mockRepo := new(MockUserRepository)
@@ -468,6 +468,11 @@ func (m *MockUserRepository) DeleteUserCredential(userID uint) error {
 func (m *MockUserRepository) GetRefreshTokenByUserID(userID uint) (string, error) {
 	args := m.Called(userID)
 	return args.String(0), args.Error(1)
+}
+
+func (m *MockUserRepository) GetUserProfileByID(userID string) (*entities.UserProfile, error) {
+	args := m.Called(userID)
+	return args.Get(0).(*entities.UserProfile), args.Error(1)
 }
 
 type MockUserUtilsService struct {
