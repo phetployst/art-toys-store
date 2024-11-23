@@ -483,3 +483,8 @@ func (m *MockUserUsecase) UpdateUserProfile(userProfile *entities.UserProfile) (
 	args := m.Called(userProfile)
 	return args.Get(0).(*entities.UserProfileResponse), args.Error(1)
 }
+
+func (m *MockUserUsecase) GetAllUserProfile() (int64, []entities.UserProfileResponse, error) {
+	args := m.Called()
+	return args.Get(0).(int64), args.Get(1).([]entities.UserProfileResponse), args.Error(2)
+}

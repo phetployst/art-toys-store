@@ -24,6 +24,7 @@ const (
 	getRefreshTokenByUserIDQuery   = `SELECT * FROM "credentials" WHERE user_id = $1 AND "credentials"."deleted_at" IS NULL ORDER BY created_at DESC,"credentials"."id" LIMIT $2`
 	getUserProfileByIDQuery        = `SELECT * FROM "user_profiles" WHERE (user_id = $1 AND deleted_at IS NULL) AND "user_profiles"."deleted_at" IS NULL ORDER BY "user_profiles"."id" LIMIT $2`
 	updateUserProfileQuery         = `UPDATE "user_profiles" SET "updated_at"=$1,"user_id"=$2,"username"=$3,"first_name"=$4,"last_name"=$5,"email"=$6,"street"=$7,"city"=$8,"state"=$9,"postal_code"=$10,"country"=$11,"profile_picture_url"=$12 WHERE user_id = $13 AND "user_profiles"."deleted_at" IS NULL`
+	getAllUserProfileQuery         = `SELECT * FROM "user_profiles" WHERE "user_profiles"."deleted_at" IS NULL`
 )
 
 func TestCreateUser_gormRepo(t *testing.T) {
@@ -625,5 +626,69 @@ func TestUpdateUserProfile_gormRepo(t *testing.T) {
 
 		assert.Error(t, err)
 		assert.Nil(t, updatedProfile)
+	})
+}
+
+func TestGetAllUserProfile_gormRepo(t *testing.T) {
+	t.Run("get all user profiles successfully", func(t *testing.T) {
+		db, mock, _ := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
+		defer db.Close()
+
+		gormDB, _ := gorm.Open(postgres.New(postgres.Config{Conn: db}), &gorm.Config{})
+		repo := &gormUserRepository{db: gormDB}
+
+		rows := sqlmock.NewRows([]string{
+			"user_id", "username", "first_name", "last_name", "email",
+			"street", "city", "state", "postal_code", "country",
+			"profile_picture_url",
+		}).AddRow(
+			31, "phetploy", "Phet", "Ploy", "phetploy@example.com",
+			"123 Green Lane", "Bangkok", "Central", "10110", "Thailand",
+			"https://example.com/profiles/31.jpg",
+		).AddRow(
+			32, "tonytonychopper", "Tony", "Chopper", "tonychopper@example.com",
+			"456 Blue Street", "Chiang Mai", "North", "50200", "Thailand",
+			"https://example.com/profiles/32.jpg",
+		)
+
+		mock.ExpectQuery(getAllUserProfileQuery).
+			WillReturnRows(rows)
+
+		count, profiles, err := repo.GetAllUserProfile()
+
+		expectedProfiles := []entities.UserProfile{
+			{UserID: 31, Username: "phetploy", FirstName: "Phet", LastName: "Ploy", Email: "phetploy@example.com",
+				Address:           entities.Address{Street: "123 Green Lane", City: "Bangkok", State: "Central", PostalCode: "10110", Country: "Thailand"},
+				ProfilePictureURL: "https://example.com/profiles/31.jpg"},
+			{UserID: 32, Username: "tonytonychopper", FirstName: "Tony", LastName: "Chopper", Email: "tonychopper@example.com",
+				Address:           entities.Address{Street: "456 Blue Street", City: "Chiang Mai", State: "North", PostalCode: "50200", Country: "Thailand"},
+				ProfilePictureURL: "https://example.com/profiles/32.jpg"},
+		}
+
+		assert.NoError(t, err)
+		assert.Equal(t, int64(2), count)
+		assert.Equal(t, expectedProfiles, profiles)
+
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
+
+	t.Run("database error while fetching profiles", func(t *testing.T) {
+		db, mock, _ := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
+		defer db.Close()
+
+		gormDB, _ := gorm.Open(postgres.New(postgres.Config{Conn: db}), &gorm.Config{})
+		repo := &gormUserRepository{db: gormDB}
+
+		mock.ExpectQuery(getAllUserProfileQuery).
+			WillReturnError(errors.New("database error"))
+
+		count, profiles, err := repo.GetAllUserProfile()
+
+		assert.Error(t, err)
+		assert.EqualError(t, err, "database error")
+		assert.Equal(t, int64(0), count)
+		assert.Nil(t, profiles)
+
+		assert.NoError(t, mock.ExpectationsWereMet())
 	})
 }

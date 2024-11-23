@@ -226,3 +226,91 @@ func TestUpdateUserProfile_user(t *testing.T) {
 		assert.Equal(t, http.StatusInternalServerError, response.Code)
 	})
 }
+
+func TestGetAllUserProfile_user(t *testing.T) {
+	t.Run("get all user profiles successfully", func(t *testing.T) {
+		mockUsecase := new(MockUserUsecase)
+		handler := &httpUserHandler{usecase: mockUsecase}
+
+		e := echo.New()
+		defer e.Close()
+
+		mockProfiles := []entities.UserProfileResponse{
+			{
+				UserID: 31, Username: "phetploy", FirstName: "Phet", LastName: "Ploy",
+				Email: "phetploy@example.com", Address: entities.Address{
+					Street: "123 Green Lane", City: "Bangkok", State: "Central", PostalCode: "10110", Country: "Thailand",
+				}, ProfilePictureURL: "https://example.com/profiles/31.jpg",
+			},
+			{
+				UserID: 32, Username: "tonytonychopper", FirstName: "Tony", LastName: "Chopper",
+				Email: "tonychopper@example.com", Address: entities.Address{
+					Street: "456 Blue Street", City: "Chiang Mai", State: "North", PostalCode: "50200", Country: "Thailand",
+				}, ProfilePictureURL: "https://example.com/profiles/32.jpg",
+			},
+		}
+
+		mockUsecase.On("GetAllUserProfile").Return(int64(2), mockProfiles, nil)
+
+		request := httptest.NewRequest(http.MethodGet, "/user-profiles", nil)
+		response := httptest.NewRecorder()
+		c := e.NewContext(request, response)
+
+		err := handler.GetAllUserProfile(c)
+		expectedResponse := `{
+			"count": 2,
+			"userProfiles": [
+				{"user_id": 31, "username": "phetploy", "first_name": "Phet", "last_name": "Ploy", "email": "phetploy@example.com",
+				 "address": {"street": "123 Green Lane", "city": "Bangkok", "state": "Central", "postal_code": "10110", "country": "Thailand"},
+				 "profile_picture_url": "https://example.com/profiles/31.jpg"},
+				{"user_id": 32, "username": "tonytonychopper", "first_name": "Tony", "last_name": "Chopper", "email": "tonychopper@example.com",
+				 "address": {"street": "456 Blue Street", "city": "Chiang Mai", "state": "North", "postal_code": "50200", "country": "Thailand"},
+				 "profile_picture_url": "https://example.com/profiles/32.jpg"}
+			]
+		}`
+
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusOK, response.Code)
+		assert.JSONEq(t, expectedResponse, response.Body.String())
+	})
+
+	t.Run("internal server error", func(t *testing.T) {
+		mockUsecase := new(MockUserUsecase)
+		handler := &httpUserHandler{usecase: mockUsecase}
+
+		e := echo.New()
+		defer e.Close()
+
+		mockUsecase.On("GetAllUserProfile").Return(int64(0), ([]entities.UserProfileResponse)(nil), errors.New("unexpected error"))
+
+		request := httptest.NewRequest(http.MethodGet, "/user-profiles", nil)
+		response := httptest.NewRecorder()
+		c := e.NewContext(request, response)
+
+		err := handler.GetAllUserProfile(c)
+
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusInternalServerError, response.Code)
+		assert.JSONEq(t, `{"message":"internal server error"}`, response.Body.String())
+	})
+
+	t.Run("no user profiles found", func(t *testing.T) {
+		mockUsecase := new(MockUserUsecase)
+		handler := &httpUserHandler{usecase: mockUsecase}
+
+		e := echo.New()
+		defer e.Close()
+
+		mockUsecase.On("GetAllUserProfile").Return(int64(0), ([]entities.UserProfileResponse)(nil), errors.New("no user profiles found"))
+
+		request := httptest.NewRequest(http.MethodGet, "/user-profiles", nil)
+		response := httptest.NewRecorder()
+		c := e.NewContext(request, response)
+
+		err := handler.GetAllUserProfile(c)
+
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusNotFound, response.Code)
+		assert.JSONEq(t, `{"message":"no user profiles found"}`, response.Body.String())
+	})
+}

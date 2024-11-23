@@ -15,6 +15,7 @@ type UserUsecase interface {
 	Refresh(userID *entities.Refresh, config *config.Config) (*entities.UserCredential, error)
 	GetUserProfile(userID string) (*entities.UserProfileResponse, error)
 	UpdateUserProfile(userProfile *entities.UserProfile) (*entities.UserProfileResponse, error)
+	GetAllUserProfile() (int64, []entities.UserProfileResponse, error)
 }
 
 type userService struct {
@@ -63,4 +64,30 @@ func (s *userService) UpdateUserProfile(userProfile *entities.UserProfile) (*ent
 		Address:           userProfileUpdate.Address,
 		ProfilePictureURL: userProfileUpdate.ProfilePictureURL,
 	}, nil
+}
+
+func (s *userService) GetAllUserProfile() (int64, []entities.UserProfileResponse, error) {
+	count, profiles, err := s.repo.GetAllUserProfile()
+	if err != nil {
+		return 0, nil, errors.New("internal server error")
+	}
+
+	if count == 0 {
+		return 0, nil, errors.New("no user profiles found")
+	}
+
+	var userProfileResponses []entities.UserProfileResponse
+	for _, profile := range profiles {
+		userProfileResponses = append(userProfileResponses, entities.UserProfileResponse{
+			UserID:            profile.UserID,
+			Username:          profile.Username,
+			FirstName:         profile.FirstName,
+			LastName:          profile.LastName,
+			Email:             profile.Email,
+			Address:           profile.Address,
+			ProfilePictureURL: profile.ProfilePictureURL,
+		})
+	}
+
+	return count, userProfileResponses, nil
 }

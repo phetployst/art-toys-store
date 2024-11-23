@@ -130,3 +130,14 @@ func (r *gormUserRepository) UpdateUserProfile(userProfile *entities.UserProfile
 	}
 	return userProfile, nil
 }
+
+func (r *gormUserRepository) GetAllUserProfile() (int64, []entities.UserProfile, error) {
+	var userProfiles []entities.UserProfile
+
+	result := r.db.Find(&userProfiles)
+	if result.Error != nil {
+		return 0, nil, result.Error
+	}
+
+	return result.RowsAffected, userProfiles, nil
+}

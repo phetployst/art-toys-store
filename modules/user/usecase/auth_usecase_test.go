@@ -480,6 +480,11 @@ func (m *MockUserRepository) UpdateUserProfile(userProfile *entities.UserProfile
 	return args.Get(0).(*entities.UserProfile), args.Error(1)
 }
 
+func (m *MockUserRepository) GetAllUserProfile() (int64, []entities.UserProfile, error) {
+	args := m.Called()
+	return args.Get(0).(int64), args.Get(1).([]entities.UserProfile), args.Error(2)
+}
+
 type MockUserUtilsService struct {
 	mock.Mock
 }

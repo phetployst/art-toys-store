@@ -15,4 +15,5 @@ type UserRepository interface {
 	GetRefreshTokenByUserID(userID uint) (string, error)
 	GetUserProfileByID(userID string) (*entities.UserProfile, error)
 	UpdateUserProfile(userProfile *entities.UserProfile) (*entities.UserProfile, error)
+	GetAllUserProfile() (int64, []entities.UserProfile, error)
 }

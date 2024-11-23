@@ -65,3 +65,26 @@ func (h *httpUserHandler) UpdateUserProfile(c echo.Context) error {
 
 	return c.JSON(http.StatusCreated, userProfileUpdate)
 }
+
+func (h *httpUserHandler) GetAllUserProfile(c echo.Context) error {
+	count, userProfiles, err := h.usecase.GetAllUserProfile()
+	if err != nil {
+		switch err.Error() {
+		case "no user profiles found":
+			return c.JSON(http.StatusNotFound, ErrorResponse{
+				Message: "no user profiles found",
+			})
+		default:
+			log.Printf("unexpected error: %v", err)
+			return c.JSON(http.StatusInternalServerError, ErrorResponse{
+				Message: "internal server error",
+			})
+		}
+	}
+
+	response := map[string]interface{}{
+		"count":        count,
+		"userProfiles": userProfiles,
+	}
+	return c.JSON(http.StatusOK, response)
+}

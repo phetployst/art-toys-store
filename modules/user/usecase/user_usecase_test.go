@@ -87,7 +87,7 @@ func TestGetUserProfile_user(t *testing.T) {
 	})
 }
 
-func TestUpdateUserProfile(t *testing.T) {
+func TestUpdateUserProfile_user(t *testing.T) {
 	t.Run("successfully update user profile", func(t *testing.T) {
 		mockRepo := new(MockUserRepository)
 		service := userService{repo: mockRepo}
@@ -147,4 +147,75 @@ func TestUpdateUserProfile(t *testing.T) {
 		assert.Equal(t, "internal server error", err.Error())
 		mockRepo.AssertExpectations(t)
 	})
+}
+
+func TestGetAllUserProfile_user(t *testing.T) {
+	t.Run("successfully retrieves all user profiles", func(t *testing.T) {
+		mockRepo := new(MockUserRepository)
+		service := userService{repo: mockRepo}
+
+		mockProfiles := []entities.UserProfile{
+			{UserID: 31, Username: "phetploy", FirstName: "Phet", LastName: "Ploy", Email: "phetploy@example.com",
+				ProfilePictureURL: "https://example.com/profiles/14.jpg",
+				Address:           entities.Address{Street: "123 Green Lane", City: "Bangkok", State: "Central", PostalCode: "10110", Country: "Thailand"}},
+			{UserID: 32, Username: "tonytony chopper", FirstName: "Tony", LastName: "Chopper", Email: "tonychopper@example.com",
+				ProfilePictureURL: "https://example.com/profiles/32.jpg",
+				Address:           entities.Address{Street: "456 Blue Street", City: "Chiang Mai", State: "North", PostalCode: "50200", Country: "Thailand"}},
+		}
+		mockRepo.On("GetAllUserProfile").Return(int64(2), mockProfiles, nil)
+
+		gotCount, gotProfiles, err := service.GetAllUserProfile()
+
+		want := []entities.UserProfileResponse{
+			{UserID: 31, Username: "phetploy", FirstName: "Phet", LastName: "Ploy", Email: "phetploy@example.com",
+				ProfilePictureURL: "https://example.com/profiles/14.jpg",
+				Address:           entities.Address{Street: "123 Green Lane", City: "Bangkok", State: "Central", PostalCode: "10110", Country: "Thailand"}},
+			{UserID: 32, Username: "tonytony chopper", FirstName: "Tony", LastName: "Chopper", Email: "tonychopper@example.com",
+				ProfilePictureURL: "https://example.com/profiles/32.jpg",
+				Address:           entities.Address{Street: "456 Blue Street", City: "Chiang Mai", State: "North", PostalCode: "50200", Country: "Thailand"}},
+		}
+
+		assert.NoError(t, err)
+		assert.Equal(t, int64(2), gotCount)
+		assert.Equal(t, want, gotProfiles)
+	})
+
+	t.Run("error retrieving user profiles", func(t *testing.T) {
+		mockRepo := new(MockUserRepository)
+		service := userService{repo: mockRepo}
+
+		mockRepo.On("GetAllUserProfile").Return(int64(0), ([]entities.UserProfile)(nil), errors.New("database error"))
+
+		gotCount, gotProfiles, err := service.GetAllUserProfile()
+
+		assert.Error(t, err)
+		assert.EqualError(t, err, "internal server error")
+
+		if gotCount != int64(0) {
+			t.Errorf("got count %v but want %v", gotCount, int64(0))
+		}
+		if !reflect.DeepEqual(gotProfiles, []entities.UserProfileResponse(nil)) {
+			t.Errorf("got profiles %v but want %v", gotProfiles, []entities.UserProfileResponse(nil))
+		}
+	})
+
+	t.Run("no user profiles found", func(t *testing.T) {
+		mockRepo := new(MockUserRepository)
+		service := userService{repo: mockRepo}
+
+		mockRepo.On("GetAllUserProfile").Return(int64(0), ([]entities.UserProfile)(nil), nil)
+
+		gotCount, gotProfiles, err := service.GetAllUserProfile()
+
+		assert.Error(t, err)
+		assert.EqualError(t, err, "no user profiles found")
+
+		if gotCount != int64(0) {
+			t.Errorf("got count %v but want %v", gotCount, int64(0))
+		}
+		if !reflect.DeepEqual(gotProfiles, []entities.UserProfileResponse(nil)) {
+			t.Errorf("got profiles %v but want %v", gotProfiles, []entities.UserProfileResponse(nil))
+		}
+	})
+
 }
