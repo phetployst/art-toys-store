@@ -36,6 +36,16 @@ func (s *userService) CreateNewUser(user *entities.User) (*entities.UserAccount,
 		return nil, errors.New("internal server error")
 	}
 
+	userProfile := &entities.UserProfile{
+		UserID:   userAccount.UserID,
+		Username: userAccount.Username,
+		Email:    userAccount.Email,
+	}
+
+	if err := s.repo.InsertUserProfile(userProfile); err != nil {
+		return nil, errors.New("internal server error")
+	}
+
 	return userAccount, nil
 
 }

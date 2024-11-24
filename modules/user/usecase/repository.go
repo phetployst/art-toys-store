@@ -16,4 +16,5 @@ type UserRepository interface {
 	GetUserProfileByID(userID string) (*entities.UserProfile, error)
 	UpdateUserProfile(userProfile *entities.UserProfile) (*entities.UserProfile, error)
 	GetAllUserProfile() (int64, []entities.UserProfile, error)
+	InsertUserProfile(profile *entities.UserProfile) error
 }

@@ -2,6 +2,7 @@ package adapters
 
 import (
 	"errors"
+	"log"
 
 	"github.com/phetployst/art-toys-store/modules/user/entities"
 	"github.com/phetployst/art-toys-store/modules/user/usecase"
@@ -140,4 +141,13 @@ func (r *gormUserRepository) GetAllUserProfile() (int64, []entities.UserProfile,
 	}
 
 	return result.RowsAffected, userProfiles, nil
+}
+
+func (r *gormUserRepository) InsertUserProfile(userProfile *entities.UserProfile) error {
+	if err := r.db.Create(userProfile).Error; err != nil {
+		return err
+	}
+
+	log.Printf("user profile inserted: %+v", userProfile)
+	return nil
 }

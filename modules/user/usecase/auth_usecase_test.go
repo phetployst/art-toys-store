@@ -26,6 +26,7 @@ func TestRegisterUsecase_auth(t *testing.T) {
 		mockUtil.On("HashedPassword", user.PasswordHash).Return([]byte("hashedpassword"), nil)
 		mockRepo.On("CreateUser", mock.Anything).Return(uint(1), nil)
 		mockUtil.On("GetUserAccountById", uint(1)).Return(&entities.UserAccount{UserID: uint(1), Username: user.Username, Email: user.Email}, nil)
+		mockRepo.On("InsertUserProfile", mock.Anything).Return(nil)
 
 		want := &entities.UserAccount{
 			UserID:   uint(1),
@@ -101,6 +102,26 @@ func TestRegisterUsecase_auth(t *testing.T) {
 		mockUtil.On("HashedPassword", user.PasswordHash).Return([]byte("hashedpassword"), nil)
 		mockRepo.On("CreateUser", mock.Anything).Return(uint(1), nil)
 		mockUtil.On("GetUserAccountById", uint(1)).Return((*entities.UserAccount)(nil), errors.New("database error"))
+
+		_, err := userService.CreateNewUser(user)
+
+		assert.Error(t, err)
+		assert.EqualError(t, err, "internal server error")
+
+	})
+
+	t.Run("register user given error when insert user profile query ", func(t *testing.T) {
+		mockRepo := new(MockUserRepository)
+		mockUtil := new(MockUserUtilsService)
+		userService := userService{repo: mockRepo, utils: mockUtil}
+
+		user := &entities.User{Email: "phetploy@example.com", Username: "phetploy", PasswordHash: "password1234", Role: "user"}
+
+		mockRepo.On("IsUniqueUser", user.Email, user.Username).Return(true)
+		mockUtil.On("HashedPassword", user.PasswordHash).Return([]byte("hashedpassword"), nil)
+		mockRepo.On("CreateUser", mock.Anything).Return(uint(1), nil)
+		mockUtil.On("GetUserAccountById", uint(1)).Return(&entities.UserAccount{UserID: uint(1), Username: user.Username, Email: user.Email}, nil)
+		mockRepo.On("InsertUserProfile", mock.Anything).Return(errors.New("database error"))
 
 		_, err := userService.CreateNewUser(user)
 
@@ -483,6 +504,11 @@ func (m *MockUserRepository) UpdateUserProfile(userProfile *entities.UserProfile
 func (m *MockUserRepository) GetAllUserProfile() (int64, []entities.UserProfile, error) {
 	args := m.Called()
 	return args.Get(0).(int64), args.Get(1).([]entities.UserProfile), args.Error(2)
+}
+
+func (m *MockUserRepository) InsertUserProfile(userProfile *entities.UserProfile) error {
+	args := m.Called(userProfile)
+	return args.Error(0)
 }
 
 type MockUserUtilsService struct {

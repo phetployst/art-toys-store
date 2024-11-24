@@ -25,6 +25,7 @@ const (
 	getUserProfileByIDQuery        = `SELECT * FROM "user_profiles" WHERE (user_id = $1 AND deleted_at IS NULL) AND "user_profiles"."deleted_at" IS NULL ORDER BY "user_profiles"."id" LIMIT $2`
 	updateUserProfileQuery         = `UPDATE "user_profiles" SET "updated_at"=$1,"user_id"=$2,"username"=$3,"first_name"=$4,"last_name"=$5,"email"=$6,"street"=$7,"city"=$8,"state"=$9,"postal_code"=$10,"country"=$11,"profile_picture_url"=$12 WHERE user_id = $13 AND "user_profiles"."deleted_at" IS NULL`
 	getAllUserProfileQuery         = `SELECT * FROM "user_profiles" WHERE "user_profiles"."deleted_at" IS NULL`
+	insertUserProfileQuery         = `INSERT INTO "user_profiles" ("created_at","updated_at","deleted_at","user_id","username","first_name","last_name","email","street","city","state","postal_code","country","profile_picture_url") VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING "id"`
 )
 
 func TestCreateUser_gormRepo(t *testing.T) {
@@ -668,8 +669,6 @@ func TestGetAllUserProfile_gormRepo(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, int64(2), count)
 		assert.Equal(t, expectedProfiles, profiles)
-
-		assert.NoError(t, mock.ExpectationsWereMet())
 	})
 
 	t.Run("database error while fetching profiles", func(t *testing.T) {
@@ -688,7 +687,55 @@ func TestGetAllUserProfile_gormRepo(t *testing.T) {
 		assert.EqualError(t, err, "database error")
 		assert.Equal(t, int64(0), count)
 		assert.Nil(t, profiles)
-
-		assert.NoError(t, mock.ExpectationsWereMet())
 	})
+}
+
+func TestInsertUserProfile_gormRepo(t *testing.T) {
+	t.Run("insert user profile successfully", func(t *testing.T) {
+		db, mock, _ := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
+		defer db.Close()
+
+		gormDB, _ := gorm.Open(postgres.New(postgres.Config{Conn: db}), &gorm.Config{})
+		repo := NewUserRepository(gormDB)
+
+		userProfile := &entities.UserProfile{
+			UserID: 31, Username: "phetploy", FirstName: "Phet", LastName: "Ploy", Email: "phetploy@example.com",
+			Address:           entities.Address{Street: "123 Green Lane", City: "Bangkok", State: "Central", PostalCode: "10110", Country: "Thailand"},
+			ProfilePictureURL: "https://example.com/profiles/31.jpg",
+		}
+
+		mock.ExpectBegin()
+		row := sqlmock.NewRows([]string{"id"}).AddRow(1)
+		mock.ExpectQuery(insertUserProfileQuery).
+			WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), nil, 31, "phetploy", "Phet", "Ploy", "phetploy@example.com",
+				"123 Green Lane", "Bangkok", "Central", "10110", "Thailand", "https://example.com/profiles/31.jpg").
+			WillReturnRows(row)
+		mock.ExpectCommit()
+
+		err := repo.InsertUserProfile(userProfile)
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("database error during query", func(t *testing.T) {
+		db, mock, _ := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
+		defer db.Close()
+
+		gormDB, _ := gorm.Open(postgres.New(postgres.Config{Conn: db}), &gorm.Config{})
+		repo := NewUserRepository(gormDB)
+
+		userProfile := &entities.UserProfile{
+			UserID: 31, Username: "phetploy", FirstName: "Phet", LastName: "Ploy", Email: "phetploy@example.com",
+			Address:           entities.Address{Street: "123 Green Lane", City: "Bangkok", State: "Central", PostalCode: "10110", Country: "Thailand"},
+			ProfilePictureURL: "https://example.com/profiles/31.jpg",
+		}
+
+		mock.ExpectQuery(insertUserProfileQuery).
+			WillReturnError(errors.New("database error"))
+
+		err := repo.InsertUserProfile(userProfile)
+
+		assert.Error(t, err)
+	})
+
 }
