@@ -225,6 +225,29 @@ func TestUpdateUserProfile_user(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusInternalServerError, response.Code)
 	})
+
+	t.Run("update user profile given email or username already exists", func(t *testing.T) {
+		mockUsecase := new(MockUserUsecase)
+		handler := &httpUserHandler{usecase: mockUsecase}
+
+		e := echo.New()
+		defer e.Close()
+
+		mockUsecase.On("UpdateUserProfile", mock.AnythingOfType("*entities.UserProfile")).Return((*entities.UserProfileResponse)(nil), errors.New("email or username already exists"))
+
+		body := `{"user_id":14,"username":"phetploy","first_name":"Phet","last_name":"Ploy","email":"phetploy@example.com",
+		"address":{"street":"123 Green Lane","city":"Bangkok","state":"Central","postal_code":"10110","country":"Thailand"},"profile_picture_url":"https://example.com/profiles/14.jpg"}`
+		request := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(body))
+		request.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		response := httptest.NewRecorder()
+		c := e.NewContext(request, response)
+
+		err := handler.UpdateUserProfile(c)
+
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusConflict, response.Code)
+		assert.JSONEq(t, `{"message": "email or username already exists"}`, response.Body.String())
+	})
 }
 
 func TestGetAllUserProfile_user(t *testing.T) {

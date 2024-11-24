@@ -50,6 +50,10 @@ func (s *userService) GetUserProfile(userID string) (*entities.UserProfileRespon
 
 func (s *userService) UpdateUserProfile(userProfile *entities.UserProfile) (*entities.UserProfileResponse, error) {
 
+	if !s.repo.IsUniqueUser(userProfile.Email, userProfile.Username) {
+		return nil, errors.New("email or username already exists")
+	}
+
 	userProfileUpdate, err := s.repo.UpdateUserProfile(userProfile)
 	if err != nil {
 		return nil, errors.New("internal server error")

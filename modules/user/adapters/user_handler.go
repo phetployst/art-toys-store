@@ -59,8 +59,17 @@ func (h *httpUserHandler) UpdateUserProfile(c echo.Context) error {
 
 	userProfileUpdate, err := h.usecase.UpdateUserProfile(userProfile)
 	if err != nil {
-		log.Printf("failed to create new user: %v", err)
-		return c.JSON(http.StatusInternalServerError, err.Error())
+		switch err.Error() {
+		case "email or username already exists":
+			return c.JSON(http.StatusConflict, ErrorResponse{
+				Message: "email or username already exists",
+			})
+		default:
+			log.Printf("unexpected error: %v", err)
+			return c.JSON(http.StatusInternalServerError, ErrorResponse{
+				Message: "Internal server error",
+			})
+		}
 	}
 
 	return c.JSON(http.StatusCreated, userProfileUpdate)

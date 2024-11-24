@@ -108,6 +108,7 @@ func TestUpdateUserProfile_user(t *testing.T) {
 			},
 		}
 
+		mockRepo.On("IsUniqueUser", userProfile.Email, userProfile.Username).Return(true)
 		mockRepo.On("UpdateUserProfile", userProfile).Return(userProfile, nil)
 
 		want := &entities.UserProfileResponse{
@@ -138,6 +139,7 @@ func TestUpdateUserProfile_user(t *testing.T) {
 		mockRepo := new(MockUserRepository)
 		service := userService{repo: mockRepo}
 
+		mockRepo.On("IsUniqueUser", mock.Anything, mock.Anything).Return(true)
 		mockRepo.On("UpdateUserProfile", mock.AnythingOfType("*entities.UserProfile")).Return((*entities.UserProfile)(nil), errors.New("database error"))
 
 		got, err := service.UpdateUserProfile(&entities.UserProfile{})
@@ -146,6 +148,19 @@ func TestUpdateUserProfile_user(t *testing.T) {
 		assert.Error(t, err)
 		assert.Equal(t, "internal server error", err.Error())
 		mockRepo.AssertExpectations(t)
+	})
+
+	t.Run("update user profile given email or username already exists", func(t *testing.T) {
+		mockRepo := new(MockUserRepository)
+		userService := userService{repo: mockRepo}
+
+		mockRepo.On("IsUniqueUser", mock.Anything, mock.Anything).Return(false)
+
+		_, err := userService.UpdateUserProfile(&entities.UserProfile{})
+
+		assert.Error(t, err)
+		assert.EqualError(t, err, "email or username already exists")
+
 	})
 }
 
