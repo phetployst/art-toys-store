@@ -1,6 +1,10 @@
 package config
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
 
 type StubEnvGetter map[string]string
 
@@ -18,7 +22,7 @@ func TestGetStringEnv(t *testing.T) {
 		want := "hello"
 
 		if got != want {
-			t.Errorf("expected %q but got %q", got, want)
+			t.Errorf("expected %q but got %q", want, got)
 		}
 	})
 
@@ -27,7 +31,7 @@ func TestGetStringEnv(t *testing.T) {
 		want := "world"
 
 		if got != want {
-			t.Errorf("expected %q but got %q", got, want)
+			t.Errorf("expected %q but got %q", want, got)
 		}
 	})
 }
@@ -42,7 +46,7 @@ func TestGetIntEnv(t *testing.T) {
 		want := 42
 
 		if got != want {
-			t.Errorf("expected %d but got %d", got, want)
+			t.Errorf("expected %d but got %d", want, got)
 		}
 	})
 
@@ -53,7 +57,7 @@ func TestGetIntEnv(t *testing.T) {
 		want := 10
 
 		if got != want {
-			t.Errorf("expected %d but got %d", got, want)
+			t.Errorf("expected %d but got %d", want, got)
 		}
 	})
 
@@ -66,24 +70,47 @@ func TestGetIntEnv(t *testing.T) {
 		want := 10
 
 		if got != want {
-			t.Errorf("expected %d but got %d", got, want)
+			t.Errorf("expected %d but got %d", want, got)
 		}
 	})
 }
 
+func TestGetRequiredEnv(t *testing.T) {
+	t.Run("get value given key exists", func(t *testing.T) {
+		envGetter := StubEnvGetter{
+			"REQUIRED_VAR": "SECRET",
+		}
+		configProvider := ConfigProvider{Getter: envGetter}
+		got, _ := configProvider.GetRequiredEnv("REQUIRED_VAR")
+		want := "SECRET"
+
+		if got != want {
+			t.Errorf("expected %v but got %v", want, got)
+		}
+	})
+
+	t.Run("get value given error when key do not exists", func(t *testing.T) {
+		envGetter := StubEnvGetter{}
+		configProvider := ConfigProvider{Getter: envGetter}
+		_, err := configProvider.GetRequiredEnv("REQUIRED_VAR")
+
+		assert.Error(t, err)
+	})
+}
+
 func TestGetConfig(t *testing.T) {
-	t.Run("get server given keys exist", func(t *testing.T) {
+	t.Run("get env given keys exist", func(t *testing.T) {
 		envGetter := StubEnvGetter{
 			"ENVIRONMENT":          "local",
 			"SERVICE_NAME":         "auth",
 			"HOSTNAME":             "localhost",
 			"PORT":                 "5000",
 			"DB_CONNECTION_STRING": "db://localhost:5432",
-			"JWT_ACCESS_SECRET":    "secret",
-			"JWT_REFRESH_SECRET":   "it_is_a_secret",
+			"JWT_ACCESS_SECRET":    "access-secret",
+			"JWT_REFRESH_SECRET":   "refresh-secret",
 		}
 		configProvider := ConfigProvider{Getter: envGetter}
-		config := configProvider.GetConfig()
+		config, err := configProvider.GetConfig()
 
 		got := config
 		want := Config{
@@ -95,38 +122,53 @@ func TestGetConfig(t *testing.T) {
 				DBConnectionString: "db://localhost:5432",
 			},
 			Jwt: Jwt{
-				AccessTokenSecret:  "secret",
-				RefreshTokenSecret: "it_is_a_secret",
+				AccessTokenSecret:  "access-secret",
+				RefreshTokenSecret: "refresh-secret",
 			},
 		}
 
+		assert.NoError(t, err)
+
 		if got != want {
-			t.Errorf("expected %v but got %v", got, want)
+			t.Errorf("expected %v but got %v", want, got)
 		}
 	})
 
-	t.Run("get server given keys do not exist", func(t *testing.T) {
-		envGetter := StubEnvGetter{}
+	t.Run("get default value server when keys do not exist", func(t *testing.T) {
+		envGetter := StubEnvGetter{
+			"JWT_ACCESS_SECRET":  "access-secret",
+			"JWT_REFRESH_SECRET": "refresh-secret",
+		}
 		configProvider := ConfigProvider{Getter: envGetter}
-		config := configProvider.GetConfig()
+		config, err := configProvider.GetConfig()
 
 		got := config
 		want := Config{
 			Environment: "local",
 			Server: Server{
-				ServiceName:        "",
+				ServiceName:        "account",
 				Hostname:           "localhost",
-				Port:               0,
+				Port:               1323,
 				DBConnectionString: "",
 			},
 			Jwt: Jwt{
-				AccessTokenSecret:  "",
-				RefreshTokenSecret: "",
+				AccessTokenSecret:  "access-secret",
+				RefreshTokenSecret: "refresh-secret",
 			},
 		}
 
+		assert.NoError(t, err)
+
 		if got != want {
-			t.Errorf("expected %v but got %v", got, want)
+			t.Errorf("expected %v but got %v", want, got)
 		}
+	})
+
+	t.Run("get error given JWT secret do not exist", func(t *testing.T) {
+		envGetter := StubEnvGetter{}
+		configProvider := ConfigProvider{Getter: envGetter}
+		_, err := configProvider.GetConfig()
+
+		assert.Error(t, err)
 	})
 }
