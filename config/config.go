@@ -2,7 +2,6 @@ package config
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"strconv"
 
@@ -16,8 +15,15 @@ type (
 
 	OsEnvGetter struct{}
 
+	EnvLoader interface {
+		Loadenv(path string) error
+	}
+
+	GodotenvLoader struct{}
+
 	ConfigProvider struct {
 		Getter EnvGetter
+		Loader EnvLoader
 	}
 
 	Config struct {
@@ -41,6 +47,10 @@ type (
 
 func (o *OsEnvGetter) Getenv(key string) string {
 	return os.Getenv(key)
+}
+
+func (g *GodotenvLoader) Loadenv(path string) error {
+	return godotenv.Load(path)
 }
 
 func (c *ConfigProvider) GetStringEnv(key string, defaultValue string) string {
@@ -71,10 +81,11 @@ func (c *ConfigProvider) GetRequiredEnv(key string) (string, error) {
 	return value, nil
 }
 
-func LoadEnvFile(path string) {
-	if err := godotenv.Load(path); err != nil {
-		log.Fatal("Error loading .env file")
+func (c *ConfigProvider) LoadEnvFile(path string) error {
+	if err := c.Loader.Loadenv(path); err != nil {
+		return fmt.Errorf("error loading .env file: %w", err)
 	}
+	return nil
 }
 
 func (c *ConfigProvider) GetConfig() (Config, error) {

@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -10,6 +11,17 @@ type StubEnvGetter map[string]string
 
 func (s StubEnvGetter) Getenv(key string) string {
 	return s[key]
+}
+
+type MockEnvLoader struct {
+	LoadenvFunc func(path string) error
+}
+
+func (m *MockEnvLoader) Loadenv(path string) error {
+	if m.LoadenvFunc != nil {
+		return m.LoadenvFunc(path)
+	}
+	return nil
 }
 
 func TestGetStringEnv(t *testing.T) {
@@ -98,6 +110,33 @@ func TestGetRequiredEnv(t *testing.T) {
 	})
 }
 
+func TestLoadEnvFile(t *testing.T) {
+	t.Run("successfully load env file", func(t *testing.T) {
+		mockLoader := &MockEnvLoader{
+			LoadenvFunc: func(path string) error {
+				return nil
+			},
+		}
+		configProvider := ConfigProvider{Loader: mockLoader}
+
+		err := configProvider.LoadEnvFile(".env")
+		assert.NoError(t, err, "expected no error when env file is loaded successfully")
+	})
+
+	t.Run("return error when env file fails to load", func(t *testing.T) {
+		mockLoader := &MockEnvLoader{
+			LoadenvFunc: func(path string) error {
+				return errors.New("failed to load .env file")
+			},
+		}
+		configProvider := ConfigProvider{Loader: mockLoader}
+
+		err := configProvider.LoadEnvFile(".env")
+		assert.Error(t, err, "expected an error when env file fails to load")
+		assert.Contains(t, err.Error(), "failed to load .env file")
+	})
+}
+
 func TestGetConfig(t *testing.T) {
 	t.Run("get env given keys exist", func(t *testing.T) {
 		envGetter := StubEnvGetter{
@@ -134,7 +173,7 @@ func TestGetConfig(t *testing.T) {
 		}
 	})
 
-	t.Run("get default value server when keys do not exist", func(t *testing.T) {
+	t.Run("get default value when keys do not exist", func(t *testing.T) {
 		envGetter := StubEnvGetter{
 			"JWT_ACCESS_SECRET":  "access-secret",
 			"JWT_REFRESH_SECRET": "refresh-secret",
