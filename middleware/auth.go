@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"net/http"
 	"strings"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -61,6 +62,41 @@ func (m *middlewareHandler) JwtMiddleWare(next echo.HandlerFunc) echo.HandlerFun
 
 		c.Set(ContextUserIDKey, claims.UserID)
 		c.Set(ContextRoleKey, claims.Role)
+
+		return next(c)
+	}
+}
+
+func (m *middlewareHandler) RbacMiddleware(next echo.HandlerFunc, expectedRole string) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		role, ok := c.Get(ContextRoleKey).(string)
+		if !ok || role == "" {
+			return echo.NewHTTPError(http.StatusForbidden, "Access denied: Role not found")
+		}
+
+		if role != expectedRole {
+			return echo.NewHTTPError(http.StatusForbidden, "Access denied: Insufficient permissions")
+		}
+
+		return next(c)
+	}
+}
+
+func (m *middlewareHandler) UserIdParamValidation(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		tokenUserID, ok := c.Get(ContextUserIDKey).(string)
+		if !ok || tokenUserID == "" {
+			return echo.NewHTTPError(http.StatusUnauthorized, "Invalid user ID in token")
+		}
+
+		paramUserID := c.Param("userID")
+		if paramUserID == "" {
+			return echo.NewHTTPError(http.StatusBadRequest, "User ID parameter is required")
+		}
+
+		if tokenUserID != paramUserID {
+			return echo.NewHTTPError(http.StatusForbidden, "Access denied: User ID mismatch")
+		}
 
 		return next(c)
 	}

@@ -66,3 +66,91 @@ func TestJwtMiddleWare(t *testing.T) {
 		assert.Equal(t, http.StatusUnauthorized, err.(*echo.HTTPError).Code)
 	})
 }
+
+func TestRbacMiddleware(t *testing.T) {
+	t.Run("should pass when user has valid role", func(t *testing.T) {
+		e := echo.New()
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+
+		mockConfig := &MockConfigProvider{}
+		handler := NewMiddlewareHandler(mockConfig)
+
+		c.Set(ContextRoleKey, "admin")
+
+		middlewareFunc := handler.RbacMiddleware(func(c echo.Context) error {
+			return c.String(http.StatusOK, "OK")
+		}, "admin")
+		err := middlewareFunc(c)
+
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusOK, rec.Code)
+	})
+
+	t.Run("should return forbidden when user has invalid role", func(t *testing.T) {
+		e := echo.New()
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+
+		mockConfig := &MockConfigProvider{}
+		handler := NewMiddlewareHandler(mockConfig)
+
+		c.Set(ContextRoleKey, "user")
+
+		middlewareFunc := handler.RbacMiddleware(func(c echo.Context) error {
+			return c.String(http.StatusOK, "OK")
+		}, "admin")
+		err := middlewareFunc(c)
+
+		assert.Error(t, err)
+		assert.Equal(t, http.StatusForbidden, err.(*echo.HTTPError).Code)
+	})
+}
+
+func TestUserIdParamValidation(t *testing.T) {
+	t.Run("should pass when user ID matches route parameter", func(t *testing.T) {
+		e := echo.New()
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+		c.SetParamNames("userID")
+		c.SetParamValues("18")
+
+		mockConfig := &MockConfigProvider{}
+		handler := NewMiddlewareHandler(mockConfig)
+
+		c.Set(ContextUserIDKey, "18")
+
+		middlewareFunc := handler.UserIdParamValidation(func(c echo.Context) error {
+			return c.String(http.StatusOK, "OK")
+		})
+		err := middlewareFunc(c)
+
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusOK, rec.Code)
+	})
+
+	t.Run("should return forbidden when user ID does not match route parameter", func(t *testing.T) {
+		e := echo.New()
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+		c.SetParamNames("userID")
+		c.SetParamValues("21")
+
+		mockConfig := &MockConfigProvider{}
+		handler := NewMiddlewareHandler(mockConfig)
+
+		c.Set(ContextUserIDKey, "31")
+
+		middlewareFunc := handler.UserIdParamValidation(func(c echo.Context) error {
+			return c.String(http.StatusOK, "OK")
+		})
+		err := middlewareFunc(c)
+
+		assert.Error(t, err)
+		assert.Equal(t, http.StatusForbidden, err.(*echo.HTTPError).Code)
+	})
+}
