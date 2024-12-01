@@ -29,7 +29,6 @@ type (
 	}
 
 	Refresh struct {
-		UserID       uint   `gorm:"not null;index" json:"user_id"`
 		RefreshToken string `json:"refresh_token" validate:"required"`
 	}
 

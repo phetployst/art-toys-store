@@ -332,7 +332,7 @@ func TestRefresh_auth(t *testing.T) {
 
 		config := &config.Config{Jwt: config.Jwt{AccessTokenSecret: "accessSecret", RefreshTokenSecret: "refreshSecret"}}
 
-		request := &entities.Refresh{UserID: uint(13), RefreshToken: "validRefreshToken"}
+		request := &entities.Refresh{RefreshToken: "validRefreshToken"}
 		claims := &entities.JwtCustomClaims{UserID: uint(13), Username: "tonytonychopper", Role: "user", Type: "refresh"}
 
 		mockUtils.On("ParseAndValidateToken", request.RefreshToken, config.Jwt.RefreshTokenSecret, "refresh").Return(claims, nil)
@@ -362,7 +362,7 @@ func TestRefresh_auth(t *testing.T) {
 
 		config := &config.Config{Jwt: config.Jwt{AccessTokenSecret: "accessSecret", RefreshTokenSecret: "refreshSecret"}}
 
-		request := &entities.Refresh{UserID: uint(13), RefreshToken: "invalidRefreshToken"}
+		request := &entities.Refresh{RefreshToken: "invalidRefreshToken"}
 
 		mockUtils.On("ParseAndValidateToken", request.RefreshToken, config.Jwt.RefreshTokenSecret, "refresh").Return((*entities.JwtCustomClaims)(nil), errors.New("token invalid"))
 
@@ -383,7 +383,7 @@ func TestRefresh_auth(t *testing.T) {
 
 		config := &config.Config{Jwt: config.Jwt{AccessTokenSecret: "accessSecret", RefreshTokenSecret: "refreshSecret"}}
 
-		request := &entities.Refresh{UserID: uint(13), RefreshToken: "validRefreshToken"}
+		request := &entities.Refresh{RefreshToken: "validRefreshToken"}
 		claims := &entities.JwtCustomClaims{UserID: uint(13), Username: "phetploy", Role: "user", Type: "refresh"}
 
 		mockUtils.On("ParseAndValidateToken", request.RefreshToken, config.Jwt.RefreshTokenSecret, "refresh").Return(claims, nil)
