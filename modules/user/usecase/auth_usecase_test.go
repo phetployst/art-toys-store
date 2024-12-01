@@ -153,10 +153,11 @@ func TestLoginUsecase_auth(t *testing.T) {
 		mockUtil.On("SaveUserCredentials", user.ID, refreshToken, expiry).Return(nil)
 
 		want := &entities.UserCredential{
-			UserID:      uint(13),
-			Username:    "phetploy",
-			Role:        "user",
-			AccessToken: "access_token",
+			UserID:       uint(13),
+			Username:     "phetploy",
+			Role:         "user",
+			AccessToken:  "access_token",
+			RefreshToken: "refresh_token",
 		}
 
 		got, err := userService.Login(loginRequest, config)
@@ -338,10 +339,11 @@ func TestRefresh_auth(t *testing.T) {
 		mockUtils.On("GenerateJWT", claims.UserID, claims.Username, claims.Role, config).Return("newAccessToken", nil)
 
 		want := &entities.UserCredential{
-			UserID:      uint(13),
-			Username:    "tonytonychopper",
-			Role:        "user",
-			AccessToken: "newAccessToken",
+			UserID:       uint(13),
+			Username:     "tonytonychopper",
+			Role:         "user",
+			AccessToken:  "newAccessToken",
+			RefreshToken: "",
 		}
 
 		got, err := userService.Refresh(request, config)

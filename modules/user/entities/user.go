@@ -41,10 +41,11 @@ type (
 	}
 
 	UserCredential struct {
-		UserID      uint   `json:"user_id"`
-		Username    string `json:"username"`
-		Role        string `json:"role"`
-		AccessToken string `gorm:"type:text;not null" json:"access_token"`
+		UserID       uint   `json:"user_id"`
+		Username     string `json:"username"`
+		Role         string `json:"role"`
+		AccessToken  string `gorm:"type:text;not null" json:"access_token"`
+		RefreshToken string `json:"refresh_token"`
 	}
 
 	JwtCustomClaims struct {

@@ -135,10 +135,11 @@ func TestLoginHandler_auth(t *testing.T) {
 
 		mockService.On("Login", mock.AnythingOfType("*entities.Login"), mock.AnythingOfType("*config.Config")).
 			Return(&entities.UserCredential{
-				UserID:      1,
-				Username:    "phetploy",
-				Role:        "user",
-				AccessToken: "access_token",
+				UserID:       1,
+				Username:     "phetploy",
+				Role:         "user",
+				AccessToken:  "access_token",
+				RefreshToken: "refresh_token",
 			}, nil)
 
 		body := `{"username": "phetploy", "password": "password1234"}`
@@ -147,7 +148,7 @@ func TestLoginHandler_auth(t *testing.T) {
 		response := httptest.NewRecorder()
 		c := e.NewContext(request, response)
 
-		expectedResponse := `{"access_token":"access_token", "role":"user", "user_id":1, "username":"phetploy"}`
+		expectedResponse := `{"access_token":"access_token", "refresh_token":"refresh_token", "role":"user", "user_id":1, "username":"phetploy"}`
 
 		err := handler.Login(c)
 
@@ -347,10 +348,11 @@ func TestRefreshHandler_auth(t *testing.T) {
 
 		mockService.On("Refresh", mock.AnythingOfType("*entities.Refresh"), mock.AnythingOfType("*config.Config")).
 			Return(&entities.UserCredential{
-				UserID:      uint(13),
-				Username:    "phetploy",
-				Role:        "user",
-				AccessToken: "newAccessToken",
+				UserID:       uint(13),
+				Username:     "phetploy",
+				Role:         "user",
+				AccessToken:  "newAccessToken",
+				RefreshToken: "",
 			}, nil)
 
 		request := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"user_id":13}`))
@@ -358,7 +360,7 @@ func TestRefreshHandler_auth(t *testing.T) {
 		response := httptest.NewRecorder()
 		c := e.NewContext(request, response)
 
-		expectedResponse := `{"user_id":13, "username":"phetploy", "role":"user", "access_token":"newAccessToken"}`
+		expectedResponse := `{"user_id":13, "username":"phetploy", "role":"user", "access_token":"newAccessToken", "refresh_token":""}`
 
 		err := handler.Refresh(c)
 

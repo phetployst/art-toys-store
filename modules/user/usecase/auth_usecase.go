@@ -76,10 +76,11 @@ func (s *userService) Login(loginRequest *entities.Login, config *config.Config)
 	}
 
 	return &entities.UserCredential{
-		UserID:      userAccount.ID,
-		Username:    userAccount.Username,
-		Role:        userAccount.Role,
-		AccessToken: accessToken,
+		UserID:       userAccount.ID,
+		Username:     userAccount.Username,
+		Role:         userAccount.Role,
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
 	}, nil
 }
 
@@ -113,9 +114,10 @@ func (s *userService) Refresh(request *entities.Refresh, config *config.Config) 
 	}
 
 	return &entities.UserCredential{
-		UserID:      claims.UserID,
-		Username:    claims.Username,
-		Role:        claims.Role,
-		AccessToken: newAccessToken,
+		UserID:       claims.UserID,
+		Username:     claims.Username,
+		Role:         claims.Role,
+		AccessToken:  newAccessToken,
+		RefreshToken: "",
 	}, nil
 }
