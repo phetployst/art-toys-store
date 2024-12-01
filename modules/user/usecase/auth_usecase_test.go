@@ -279,12 +279,10 @@ func TestLogoutUsecase_auth(t *testing.T) {
 		mockRepo := new(MockUserRepository)
 		service := userService{repo: mockRepo}
 
-		logoutRequest := &entities.Logout{UserID: 1}
-
 		mockRepo.On("GetUserCredentialByUserId", uint(1)).Return(nil)
 		mockRepo.On("DeleteUserCredential", uint(1)).Return(nil)
 
-		err := service.Logout(logoutRequest)
+		err := service.Logout(uint(1))
 
 		assert.NoError(t, err)
 	})
@@ -293,11 +291,9 @@ func TestLogoutUsecase_auth(t *testing.T) {
 		mockRepo := new(MockUserRepository)
 		service := userService{repo: mockRepo}
 
-		logoutRequest := &entities.Logout{UserID: 1}
-
 		mockRepo.On("GetUserCredentialByUserId", uint(1)).Return(gorm.ErrRecordNotFound)
 
-		err := service.Logout(logoutRequest)
+		err := service.Logout(uint(1))
 
 		assert.EqualError(t, err, "credential not found")
 	})
@@ -306,11 +302,9 @@ func TestLogoutUsecase_auth(t *testing.T) {
 		mockRepo := new(MockUserRepository)
 		service := userService{repo: mockRepo}
 
-		logoutRequest := &entities.Logout{UserID: 1}
-
 		mockRepo.On("GetUserCredentialByUserId", uint(1)).Return(errors.New("error"))
 
-		err := service.Logout(logoutRequest)
+		err := service.Logout(uint(1))
 
 		assert.EqualError(t, err, "internal server error")
 	})
@@ -319,12 +313,10 @@ func TestLogoutUsecase_auth(t *testing.T) {
 		mockRepo := new(MockUserRepository)
 		service := userService{repo: mockRepo}
 
-		logoutRequest := &entities.Logout{UserID: 1}
-
 		mockRepo.On("GetUserCredentialByUserId", uint(1)).Return(nil)
 		mockRepo.On("DeleteUserCredential", uint(1)).Return(errors.New("error"))
 
-		err := service.Logout(logoutRequest)
+		err := service.Logout(uint(1))
 
 		assert.EqualError(t, err, "internal server error")
 	})
@@ -339,12 +331,10 @@ func TestRefresh_auth(t *testing.T) {
 
 		config := &config.Config{Jwt: config.Jwt{AccessTokenSecret: "accessSecret", RefreshTokenSecret: "refreshSecret"}}
 
-		userID := &entities.Refresh{UserID: uint(13)}
-		refreshToken := "validRefreshToken"
+		request := &entities.Refresh{UserID: uint(13), RefreshToken: "validRefreshToken"}
 		claims := &entities.JwtCustomClaims{UserID: uint(13), Username: "tonytonychopper", Role: "user", Type: "refresh"}
 
-		mockRepo.On("GetRefreshTokenByUserID", userID.UserID).Return(refreshToken, nil)
-		mockUtils.On("ParseAndValidateToken", refreshToken, config.Jwt.RefreshTokenSecret, "refresh").Return(claims, nil)
+		mockUtils.On("ParseAndValidateToken", request.RefreshToken, config.Jwt.RefreshTokenSecret, "refresh").Return(claims, nil)
 		mockUtils.On("GenerateJWT", claims.UserID, claims.Username, claims.Role, config).Return("newAccessToken", nil)
 
 		want := &entities.UserCredential{
@@ -354,48 +344,13 @@ func TestRefresh_auth(t *testing.T) {
 			AccessToken: "newAccessToken",
 		}
 
-		got, err := userService.Refresh(userID, config)
+		got, err := userService.Refresh(request, config)
 
 		assert.NoError(t, err)
 
 		if !reflect.DeepEqual(got, want) {
 			t.Errorf("got %v but want %v", got, want)
 		}
-	})
-
-	t.Run("credential not found", func(t *testing.T) {
-		mockRepo := new(MockUserRepository)
-		mockUtils := new(MockUserUtilsService)
-		userService := userService{repo: mockRepo, utils: mockUtils}
-
-		config := &config.Config{Jwt: config.Jwt{AccessTokenSecret: "accessSecret", RefreshTokenSecret: "refreshSecret"}}
-
-		userID := &entities.Refresh{UserID: uint(13)}
-		mockRepo.On("GetRefreshTokenByUserID", userID.UserID).Return("", gorm.ErrRecordNotFound)
-
-		result, err := userService.Refresh(userID, config)
-
-		assert.Error(t, err)
-		assert.Nil(t, result)
-		assert.EqualError(t, err, "credential not found")
-	})
-
-	t.Run("internal server error on repo lookup", func(t *testing.T) {
-		mockRepo := new(MockUserRepository)
-		mockUtils := new(MockUserUtilsService)
-		userService := userService{repo: mockRepo, utils: mockUtils}
-
-		config := &config.Config{Jwt: config.Jwt{AccessTokenSecret: "accessSecret", RefreshTokenSecret: "refreshSecret"}}
-
-		userID := &entities.Refresh{UserID: uint(12)}
-		mockRepo.On("GetRefreshTokenByUserID", userID.UserID).Return("", errors.New("database error"))
-
-		result, err := userService.Refresh(userID, config)
-
-		assert.Error(t, err)
-		assert.Nil(t, result)
-		assert.EqualError(t, err, "internal server error")
-
 	})
 
 	t.Run("invalid refresh token", func(t *testing.T) {
@@ -405,12 +360,11 @@ func TestRefresh_auth(t *testing.T) {
 
 		config := &config.Config{Jwt: config.Jwt{AccessTokenSecret: "accessSecret", RefreshTokenSecret: "refreshSecret"}}
 
-		userID := &entities.Refresh{UserID: uint(13)}
-		refreshToken := "invalidRefreshToken"
-		mockRepo.On("GetRefreshTokenByUserID", userID.UserID).Return(refreshToken, nil)
-		mockUtils.On("ParseAndValidateToken", refreshToken, config.Jwt.RefreshTokenSecret, "refresh").Return((*entities.JwtCustomClaims)(nil), errors.New("token invalid"))
+		request := &entities.Refresh{UserID: uint(13), RefreshToken: "invalidRefreshToken"}
 
-		result, err := userService.Refresh(userID, config)
+		mockUtils.On("ParseAndValidateToken", request.RefreshToken, config.Jwt.RefreshTokenSecret, "refresh").Return((*entities.JwtCustomClaims)(nil), errors.New("token invalid"))
+
+		result, err := userService.Refresh(request, config)
 
 		assert.Error(t, err)
 		assert.Nil(t, result)
@@ -427,14 +381,13 @@ func TestRefresh_auth(t *testing.T) {
 
 		config := &config.Config{Jwt: config.Jwt{AccessTokenSecret: "accessSecret", RefreshTokenSecret: "refreshSecret"}}
 
-		userID := &entities.Refresh{UserID: uint(13)}
-		refreshToken := "validRefreshToken"
+		request := &entities.Refresh{UserID: uint(13), RefreshToken: "validRefreshToken"}
 		claims := &entities.JwtCustomClaims{UserID: uint(13), Username: "phetploy", Role: "user", Type: "refresh"}
-		mockRepo.On("GetRefreshTokenByUserID", userID.UserID).Return(refreshToken, nil)
-		mockUtils.On("ParseAndValidateToken", refreshToken, config.Jwt.RefreshTokenSecret, "refresh").Return(claims, nil)
+
+		mockUtils.On("ParseAndValidateToken", request.RefreshToken, config.Jwt.RefreshTokenSecret, "refresh").Return(claims, nil)
 		mockUtils.On("GenerateJWT", claims.UserID, claims.Username, claims.Role, config).Return("", errors.New("jwt error"))
 
-		result, err := userService.Refresh(userID, config)
+		result, err := userService.Refresh(request, config)
 
 		assert.Error(t, err)
 		assert.Nil(t, result)

@@ -83,9 +83,9 @@ func (s *userService) Login(loginRequest *entities.Login, config *config.Config)
 	}, nil
 }
 
-func (s *userService) Logout(logoutRequest *entities.Logout) error {
+func (s *userService) Logout(userID uint) error {
 
-	if err := s.repo.GetUserCredentialByUserId(logoutRequest.UserID); err != nil {
+	if err := s.repo.GetUserCredentialByUserId(userID); err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 
 			return errors.New("credential not found")
@@ -93,25 +93,16 @@ func (s *userService) Logout(logoutRequest *entities.Logout) error {
 		return errors.New("internal server error")
 	}
 
-	if err := s.repo.DeleteUserCredential(logoutRequest.UserID); err != nil {
+	if err := s.repo.DeleteUserCredential(userID); err != nil {
 		return errors.New("internal server error")
 	}
 
 	return nil
 }
 
-func (s *userService) Refresh(userID *entities.Refresh, config *config.Config) (*entities.UserCredential, error) {
+func (s *userService) Refresh(request *entities.Refresh, config *config.Config) (*entities.UserCredential, error) {
 
-	refreshTokenString, err := s.repo.GetRefreshTokenByUserID(userID.UserID)
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-
-			return nil, errors.New("credential not found")
-		}
-		return nil, errors.New("internal server error")
-	}
-
-	claims, err := s.utils.ParseAndValidateToken(refreshTokenString, config.Jwt.RefreshTokenSecret, "refresh")
+	claims, err := s.utils.ParseAndValidateToken(request.RefreshToken, config.Jwt.RefreshTokenSecret, "refresh")
 	if err != nil {
 		return nil, errors.New("invalid token")
 	}

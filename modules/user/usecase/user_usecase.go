@@ -11,8 +11,8 @@ import (
 type UserUsecase interface {
 	CreateNewUser(user *entities.User) (*entities.UserAccount, error)
 	Login(loginRequest *entities.Login, config *config.Config) (*entities.UserCredential, error)
-	Logout(logoutRequest *entities.Logout) error
-	Refresh(userID *entities.Refresh, config *config.Config) (*entities.UserCredential, error)
+	Logout(userID uint) error
+	Refresh(request *entities.Refresh, config *config.Config) (*entities.UserCredential, error)
 	GetUserProfile(userID string) (*entities.UserProfileResponse, error)
 	UpdateUserProfile(userProfile *entities.UserProfile) (*entities.UserProfileResponse, error)
 	GetAllUserProfile() (int64, []entities.UserProfileResponse, error)

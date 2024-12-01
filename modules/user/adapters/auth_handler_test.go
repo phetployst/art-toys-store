@@ -386,28 +386,6 @@ func TestRefreshHandler_auth(t *testing.T) {
 		assert.JSONEq(t, `{"message":"Invalid request data"}`, response.Body.String())
 	})
 
-	t.Run("refresh credential not found", func(t *testing.T) {
-		mockService := new(MockUserUsecase)
-		handler := &httpUserHandler{usecase: mockService, config: &config.Config{}}
-
-		e := echo.New()
-		defer e.Close()
-
-		mockService.On("Refresh", mock.AnythingOfType("*entities.Refresh"), mock.AnythingOfType("*config.Config")).
-			Return((*entities.UserCredential)(nil), errors.New("credential not found"))
-
-		request := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"user_id":1}`))
-		request.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
-		response := httptest.NewRecorder()
-		c := e.NewContext(request, response)
-
-		err := handler.Refresh(c)
-
-		assert.NoError(t, err)
-		assert.Equal(t, http.StatusNotFound, response.Code)
-		assert.JSONEq(t, `{"message":"User credential not found"}`, response.Body.String())
-	})
-
 	t.Run("refresh invalid token", func(t *testing.T) {
 		mockService := new(MockUserUsecase)
 		handler := &httpUserHandler{usecase: mockService, config: &config.Config{}}

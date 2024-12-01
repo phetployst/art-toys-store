@@ -109,22 +109,18 @@ func (h *httpUserHandler) Logout(c echo.Context) error {
 }
 
 func (h *httpUserHandler) Refresh(c echo.Context) error {
-	refreshRequest := new(entities.Refresh)
+	request := new(entities.Refresh)
 
-	if err := c.Bind(&refreshRequest); err != nil {
+	if err := c.Bind(&request); err != nil {
 		log.Printf("failed to bind input: %v", err)
 		return c.JSON(http.StatusBadRequest, ErrorResponse{
 			Message: "Invalid request data",
 		})
 	}
 
-	result, err := h.usecase.Refresh(refreshRequest, h.config)
+	userCredential, err := h.usecase.Refresh(request, h.config)
 	if err != nil {
 		switch err.Error() {
-		case "credential not found":
-			return c.JSON(http.StatusNotFound, ErrorResponse{
-				Message: "User credential not found",
-			})
 		case "invalid token":
 			return c.JSON(http.StatusUnauthorized, ErrorResponse{
 				Message: "invalid token",
@@ -137,5 +133,5 @@ func (h *httpUserHandler) Refresh(c echo.Context) error {
 		}
 	}
 
-	return c.JSON(http.StatusOK, result)
+	return c.JSON(http.StatusOK, userCredential)
 }
