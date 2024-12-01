@@ -9,6 +9,10 @@ import (
 	"github.com/phetployst/art-toys-store/modules/user/entities"
 )
 
+const (
+	ContextUserIDKey = "userID"
+)
+
 type ErrorResponse struct {
 	Message string `json:"message"`
 }
@@ -76,16 +80,15 @@ func (h *httpUserHandler) Login(c echo.Context) error {
 }
 
 func (h *httpUserHandler) Logout(c echo.Context) error {
-	logoutRequest := new(entities.Logout)
 
-	if err := c.Bind(&logoutRequest); err != nil {
-		log.Printf("failed to bind input: %v", err)
-		return c.JSON(http.StatusBadRequest, ErrorResponse{
-			Message: "Invalid request data",
+	userID, ok := c.Get(ContextUserIDKey).(uint)
+	if !ok || userID == 0 {
+		return echo.NewHTTPError(http.StatusUnauthorized, ErrorResponse{
+			Message: "Invalid user ID in token",
 		})
 	}
 
-	err := h.usecase.Logout(logoutRequest)
+	err := h.usecase.Logout(userID)
 	if err != nil {
 		switch err.Error() {
 		case "credential not found":

@@ -28,10 +28,6 @@ type (
 		Password string `json:"password"`
 	}
 
-	Logout struct {
-		UserID uint `gorm:"not null;index" json:"user_id"`
-	}
-
 	Refresh struct {
 		UserID uint `gorm:"not null;index" json:"user_id"`
 	}
