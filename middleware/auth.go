@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -84,17 +85,23 @@ func (m *middlewareHandler) RbacMiddleware(next echo.HandlerFunc, expectedRole s
 
 func (m *middlewareHandler) UserIdParamValidation(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		tokenUserID, ok := c.Get(ContextUserIDKey).(string)
-		if !ok || tokenUserID == "" {
+
+		tokenUserID, ok := c.Get(ContextUserIDKey).(uint)
+		if !ok || tokenUserID == 0 {
 			return echo.NewHTTPError(http.StatusUnauthorized, "Invalid user ID in token")
 		}
 
-		paramUserID := c.Param("userID")
+		paramUserID := c.Param("user_id")
 		if paramUserID == "" {
 			return echo.NewHTTPError(http.StatusBadRequest, "User ID parameter is required")
 		}
 
-		if tokenUserID != paramUserID {
+		paramUserIDUint, err := strconv.ParseUint(paramUserID, 10, 32)
+		if err != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, "Invalid User ID format")
+		}
+
+		if tokenUserID != uint(paramUserIDUint) {
 			return echo.NewHTTPError(http.StatusForbidden, "Access denied: User ID mismatch")
 		}
 

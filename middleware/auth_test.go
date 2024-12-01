@@ -115,13 +115,13 @@ func TestUserIdParamValidation(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/", nil)
 		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)
-		c.SetParamNames("userID")
+		c.SetParamNames("user_id")
 		c.SetParamValues("18")
 
 		mockConfig := &MockConfigProvider{}
 		handler := NewMiddlewareHandler(mockConfig)
 
-		c.Set(ContextUserIDKey, "18")
+		c.Set(ContextUserIDKey, uint(18))
 
 		middlewareFunc := handler.UserIdParamValidation(func(c echo.Context) error {
 			return c.String(http.StatusOK, "OK")
@@ -137,13 +137,13 @@ func TestUserIdParamValidation(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/", nil)
 		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)
-		c.SetParamNames("userID")
+		c.SetParamNames("user_id")
 		c.SetParamValues("21")
 
 		mockConfig := &MockConfigProvider{}
 		handler := NewMiddlewareHandler(mockConfig)
 
-		c.Set(ContextUserIDKey, "31")
+		c.Set(ContextUserIDKey, uint(12))
 
 		middlewareFunc := handler.UserIdParamValidation(func(c echo.Context) error {
 			return c.String(http.StatusOK, "OK")
