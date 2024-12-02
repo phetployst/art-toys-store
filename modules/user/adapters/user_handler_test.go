@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-func TestGetProfile_user(t *testing.T) {
+func TestGetProfileById_user(t *testing.T) {
 	t.Run("get user profile successfully", func(t *testing.T) {
 		mockUsecase := new(MockUserUsecase)
 		handler := &httpUserHandler{usecase: mockUsecase}
@@ -21,7 +21,7 @@ func TestGetProfile_user(t *testing.T) {
 		e := echo.New()
 		defer e.Close()
 
-		mockUsecase.On("GetUserProfile", "14").Return(&entities.UserProfileResponse{
+		mockUsecase.On("GetUserProfile", uint(14)).Return(&entities.UserProfileResponse{
 			UserID:    14,
 			Username:  "phetploy",
 			FirstName: "Phet",
@@ -40,10 +40,9 @@ func TestGetProfile_user(t *testing.T) {
 		request := httptest.NewRequest(http.MethodGet, "/profile/14", nil)
 		response := httptest.NewRecorder()
 		c := e.NewContext(request, response)
-		c.SetParamNames("user_id")
-		c.SetParamValues("14")
+		c.Set(ContextUserIDKey, uint(14))
 
-		err := handler.GetUserProfile(c)
+		err := handler.GetUserProfileById(c)
 
 		expectedResponse := `{
 			"user_id": 14,
@@ -66,6 +65,27 @@ func TestGetProfile_user(t *testing.T) {
 		assert.JSONEq(t, expectedResponse, response.Body.String())
 	})
 
+	t.Run("get user profile with invalid or missing user ID in token", func(t *testing.T) {
+		mockService := new(MockUserUsecase)
+		handler := &httpUserHandler{usecase: mockService}
+
+		e := echo.New()
+		defer e.Close()
+
+		request := httptest.NewRequest(http.MethodPost, "/", nil)
+		request.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		response := httptest.NewRecorder()
+		c := e.NewContext(request, response)
+
+		err := handler.GetUserProfileById(c)
+
+		assert.Error(t, err)
+
+		httpError, _ := err.(*echo.HTTPError)
+		assert.Equal(t, http.StatusUnauthorized, httpError.Code)
+		assert.Equal(t, "Invalid user ID in token", httpError.Message.(ErrorResponse).Message)
+	})
+
 	t.Run("user credential not found", func(t *testing.T) {
 		mockUsecase := new(MockUserUsecase)
 		handler := &httpUserHandler{usecase: mockUsecase}
@@ -73,15 +93,14 @@ func TestGetProfile_user(t *testing.T) {
 		e := echo.New()
 		defer e.Close()
 
-		mockUsecase.On("GetUserProfile", "13").Return((*entities.UserProfileResponse)(nil), errors.New("credential not found"))
+		mockUsecase.On("GetUserProfile", uint(13)).Return((*entities.UserProfileResponse)(nil), errors.New("credential not found"))
 
 		request := httptest.NewRequest(http.MethodGet, "/profile/13", nil)
 		response := httptest.NewRecorder()
 		c := e.NewContext(request, response)
-		c.SetParamNames("user_id")
-		c.SetParamValues("13")
+		c.Set(ContextUserIDKey, uint(13))
 
-		err := handler.GetUserProfile(c)
+		err := handler.GetUserProfileById(c)
 
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusNotFound, response.Code)
@@ -95,15 +114,14 @@ func TestGetProfile_user(t *testing.T) {
 		e := echo.New()
 		defer e.Close()
 
-		mockUsecase.On("GetUserProfile", "12").Return((*entities.UserProfileResponse)(nil), errors.New("some unexpected error"))
+		mockUsecase.On("GetUserProfile", uint(12)).Return((*entities.UserProfileResponse)(nil), errors.New("some unexpected error"))
 
 		request := httptest.NewRequest(http.MethodGet, "/profile/12", nil)
 		response := httptest.NewRecorder()
 		c := e.NewContext(request, response)
-		c.SetParamNames("user_id")
-		c.SetParamValues("12")
+		c.Set(ContextUserIDKey, uint(12))
 
-		err := handler.GetUserProfile(c)
+		err := handler.GetUserProfileById(c)
 
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusInternalServerError, response.Code)

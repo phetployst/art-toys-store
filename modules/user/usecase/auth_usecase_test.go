@@ -446,7 +446,7 @@ func (m *MockUserRepository) GetRefreshTokenByUserID(userID uint) (string, error
 	return args.String(0), args.Error(1)
 }
 
-func (m *MockUserRepository) GetUserProfileByID(userID string) (*entities.UserProfile, error) {
+func (m *MockUserRepository) GetUserProfileByID(userID uint) (*entities.UserProfile, error) {
 	args := m.Called(userID)
 	return args.Get(0).(*entities.UserProfile), args.Error(1)
 }

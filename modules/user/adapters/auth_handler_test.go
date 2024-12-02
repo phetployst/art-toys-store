@@ -457,7 +457,7 @@ func (m *MockUserUsecase) Refresh(refreshRequest *entities.Refresh, config *conf
 	return args.Get(0).(*entities.UserCredential), args.Error(1)
 }
 
-func (m *MockUserUsecase) GetUserProfile(userID string) (*entities.UserProfileResponse, error) {
+func (m *MockUserUsecase) GetUserProfile(userID uint) (*entities.UserProfileResponse, error) {
 	args := m.Called(userID)
 	return args.Get(0).(*entities.UserProfileResponse), args.Error(1)
 }

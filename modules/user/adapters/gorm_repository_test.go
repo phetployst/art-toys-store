@@ -485,10 +485,10 @@ func TestGetUserProfileByID_gormRepo(t *testing.T) {
 		)
 
 		mock.ExpectQuery(getUserProfileByIDQuery).
-			WithArgs("14", 1).
+			WithArgs(uint(14), 1).
 			WillReturnRows(rows)
 
-		got, err := repo.GetUserProfileByID("14")
+		got, err := repo.GetUserProfileByID(14)
 
 		want := &entities.UserProfile{
 			UserID:            14,
@@ -521,10 +521,10 @@ func TestGetUserProfileByID_gormRepo(t *testing.T) {
 		repo := NewUserRepository(gormDB)
 
 		mock.ExpectQuery(getUserProfileByIDQuery).
-			WithArgs("18", 1).
+			WithArgs(uint(18), 1).
 			WillReturnError(gorm.ErrRecordNotFound)
 
-		profile, err := repo.GetUserProfileByID("18")
+		profile, err := repo.GetUserProfileByID(18)
 
 		assert.Error(t, err)
 		assert.Nil(t, profile)
@@ -542,7 +542,7 @@ func TestGetUserProfileByID_gormRepo(t *testing.T) {
 			WithArgs("21", 1).
 			WillReturnError(errors.New("database error"))
 
-		profile, err := repo.GetUserProfileByID("21")
+		profile, err := repo.GetUserProfileByID(21)
 
 		assert.Error(t, err)
 		assert.Nil(t, profile)

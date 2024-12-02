@@ -13,7 +13,7 @@ type UserUsecase interface {
 	Login(loginRequest *entities.Login, config *config.Config) (*entities.UserCredential, error)
 	Logout(userID uint) error
 	Refresh(request *entities.Refresh, config *config.Config) (*entities.UserCredential, error)
-	GetUserProfile(userID string) (*entities.UserProfileResponse, error)
+	GetUserProfile(userID uint) (*entities.UserProfileResponse, error)
 	UpdateUserProfile(userProfile *entities.UserProfile) (*entities.UserProfileResponse, error)
 	GetAllUserProfile() (int64, []entities.UserProfileResponse, error)
 }
@@ -27,7 +27,7 @@ func NewUserService(repo UserRepository, utils UserUtilsService) UserUsecase {
 	return &userService{repo, utils}
 }
 
-func (s *userService) GetUserProfile(userID string) (*entities.UserProfileResponse, error) {
+func (s *userService) GetUserProfile(userID uint) (*entities.UserProfileResponse, error) {
 	userProfile, err := s.repo.GetUserProfileByID(userID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {

@@ -110,7 +110,7 @@ func (r *gormUserRepository) GetRefreshTokenByUserID(userID uint) (string, error
 	return credential.RefreshToken, nil
 }
 
-func (r *gormUserRepository) GetUserProfileByID(userID string) (*entities.UserProfile, error) {
+func (r *gormUserRepository) GetUserProfileByID(userID uint) (*entities.UserProfile, error) {
 	userProfile := new(entities.UserProfile)
 
 	if err := r.db.Where("user_id = ? AND deleted_at IS NULL", userID).First(userProfile).Error; err != nil {

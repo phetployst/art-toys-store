@@ -32,7 +32,7 @@ func TestGetUserProfile_user(t *testing.T) {
 			},
 		}
 
-		mockRepo.On("GetUserProfileByID", "31").Return(userProfile, nil)
+		mockRepo.On("GetUserProfileByID", uint(31)).Return(userProfile, nil)
 
 		want := &entities.UserProfileResponse{
 			UserID:            31,
@@ -50,7 +50,7 @@ func TestGetUserProfile_user(t *testing.T) {
 			},
 		}
 
-		got, err := service.GetUserProfile("31")
+		got, err := service.GetUserProfile(uint(31))
 
 		assert.NoError(t, err)
 		if !reflect.DeepEqual(got, want) {
@@ -62,9 +62,9 @@ func TestGetUserProfile_user(t *testing.T) {
 		mockRepo := new(MockUserRepository)
 		service := userService{repo: mockRepo}
 
-		mockRepo.On("GetUserProfileByID", "223").Return((*entities.UserProfile)(nil), gorm.ErrRecordNotFound)
+		mockRepo.On("GetUserProfileByID", uint(223)).Return((*entities.UserProfile)(nil), gorm.ErrRecordNotFound)
 
-		got, err := service.GetUserProfile("223")
+		got, err := service.GetUserProfile(uint(223))
 
 		assert.Nil(t, got)
 		assert.Error(t, err)
@@ -76,9 +76,9 @@ func TestGetUserProfile_user(t *testing.T) {
 		mockRepo := new(MockUserRepository)
 		service := userService{repo: mockRepo}
 
-		mockRepo.On("GetUserProfileByID", "16").Return((*entities.UserProfile)(nil), errors.New("database connection failed"))
+		mockRepo.On("GetUserProfileByID", uint(16)).Return((*entities.UserProfile)(nil), errors.New("database connection failed"))
 
-		got, err := service.GetUserProfile("16")
+		got, err := service.GetUserProfile(uint(16))
 
 		assert.Nil(t, got)
 		assert.Error(t, err)

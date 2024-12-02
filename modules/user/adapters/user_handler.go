@@ -20,8 +20,14 @@ func NewUserHandler(usecase usecase.UserUsecase, config *config.Config) *httpUse
 	return &httpUserHandler{usecase, config}
 }
 
-func (h *httpUserHandler) GetUserProfile(c echo.Context) error {
-	userID := c.Param("user_id")
+func (h *httpUserHandler) GetUserProfileById(c echo.Context) error {
+
+	userID, ok := c.Get(ContextUserIDKey).(uint)
+	if !ok || userID == 0 {
+		return echo.NewHTTPError(http.StatusUnauthorized, ErrorResponse{
+			Message: "Invalid user ID in token",
+		})
+	}
 
 	userProfile, err := h.usecase.GetUserProfile(userID)
 	if err != nil {
