@@ -58,3 +58,12 @@ func (h *httpProductHandler) CreateNewProduct(c echo.Context) error {
 	return c.JSON(http.StatusCreated, newProduct)
 
 }
+
+func (h *httpProductHandler) GetAllProducts(c echo.Context) error {
+	products, err := h.usecase.GetAllProducts()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, ErrorResponse{Message: "internal server error"})
+	}
+
+	return c.JSON(http.StatusOK, products)
+}
