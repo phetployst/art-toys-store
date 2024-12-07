@@ -9,6 +9,7 @@ import (
 type ProductUsecase interface {
 	CreateNewProduct(product *entities.Product) (*entities.Product, error)
 	GetAllProducts() ([]entities.Product, error)
+	GetProductById(id int) (*entities.Product, error)
 }
 
 type ProductService struct {
@@ -36,4 +37,13 @@ func (s *ProductService) GetAllProducts() ([]entities.Product, error) {
 	}
 
 	return products, nil
+}
+
+func (s *ProductService) GetProductById(id int) (*entities.Product, error) {
+	product, err := s.repo.GetProductById(id)
+	if err != nil {
+		return nil, errors.New("database error")
+	}
+
+	return product, nil
 }

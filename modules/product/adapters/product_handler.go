@@ -3,6 +3,7 @@ package adapters
 import (
 	"log"
 	"net/http"
+	"strconv"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v4"
@@ -61,6 +62,18 @@ func (h *httpProductHandler) CreateNewProduct(c echo.Context) error {
 
 func (h *httpProductHandler) GetAllProducts(c echo.Context) error {
 	products, err := h.usecase.GetAllProducts()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, ErrorResponse{Message: "internal server error"})
+	}
+
+	return c.JSON(http.StatusOK, products)
+}
+
+func (h *httpProductHandler) GetProductById(c echo.Context) error {
+	productId := c.Param("id")
+	id, _ := strconv.Atoi(productId)
+
+	products, err := h.usecase.GetProductById(id)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, ErrorResponse{Message: "internal server error"})
 	}

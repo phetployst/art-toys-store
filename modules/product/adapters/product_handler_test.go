@@ -145,6 +145,51 @@ func TestGetAllProducts(t *testing.T) {
 	})
 }
 
+func TestGetProductById(t *testing.T) {
+	t.Run("get product by id successfully", func(t *testing.T) {
+		mockService := new(MockProductUsecase)
+		handler := &httpProductHandler{usecase: mockService}
+
+		e := echo.New()
+		defer e.Close()
+
+		product := &entities.Product{ID: primitive.NewObjectID(), Name: "Customizable Art Toy", Description: "A fully customizable art toy.", Price: 20.0, Category: "Customizable", Stock: 100}
+		mockService.On("GetProductById", 12).Return(product, nil)
+
+		request := httptest.NewRequest(http.MethodGet, "/", nil)
+		response := httptest.NewRecorder()
+		c := e.NewContext(request, response)
+		c.SetParamNames("id")
+		c.SetParamValues("12")
+
+		err := handler.GetProductById(c)
+
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusOK, response.Code)
+	})
+
+	t.Run("get product by id with error", func(t *testing.T) {
+		mockService := new(MockProductUsecase)
+		handler := &httpProductHandler{usecase: mockService}
+
+		e := echo.New()
+		defer e.Close()
+
+		mockService.On("GetProductById", 12).Return((*entities.Product)(nil), errors.New("database error"))
+
+		request := httptest.NewRequest(http.MethodGet, "/", nil)
+		response := httptest.NewRecorder()
+		c := e.NewContext(request, response)
+		c.SetParamNames("id")
+		c.SetParamValues("12")
+
+		err := handler.GetProductById(c)
+
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusInternalServerError, response.Code)
+	})
+}
+
 type MockProductUsecase struct {
 	mock.Mock
 }
@@ -157,4 +202,9 @@ func (m *MockProductUsecase) CreateNewProduct(product *entities.Product) (*entit
 func (m *MockProductUsecase) GetAllProducts() ([]entities.Product, error) {
 	args := m.Called()
 	return args.Get(0).([]entities.Product), args.Error(1)
+}
+
+func (m *MockProductUsecase) GetProductById(id int) (*entities.Product, error) {
+	args := m.Called(id)
+	return args.Get(0).(*entities.Product), args.Error(1)
 }

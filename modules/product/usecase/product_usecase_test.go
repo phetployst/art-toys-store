@@ -92,6 +92,35 @@ func TestGetAllProducts(t *testing.T) {
 	})
 }
 
+func TestGetProductById(t *testing.T) {
+	t.Run("get product by id successfully", func(t *testing.T) {
+		mockRepo := new(MockProductRepository)
+		productService := ProductService{repo: mockRepo}
+
+		product := &entities.Product{ID: primitive.NewObjectID(), Name: "Customizable Art Toy", Description: "A fully customizable art toy.", Price: 20.0, Category: "Customizable", Stock: 100}
+
+		mockRepo.On("GetProductById", 12).Return(product, nil)
+
+		got, err := productService.GetProductById(12)
+
+		assert.NoError(t, err)
+		assert.Equal(t, "Customizable Art Toy", got.Name)
+
+	})
+
+	t.Run("get product by id given error", func(t *testing.T) {
+		mockRepo := new(MockProductRepository)
+		productService := ProductService{repo: mockRepo}
+
+		mockRepo.On("GetProductById", 12).Return((*entities.Product)(nil), errors.New("database error"))
+
+		_, err := productService.GetProductById(12)
+
+		assert.Error(t, err)
+		assert.EqualError(t, err, "database error")
+	})
+}
+
 type MockProductRepository struct {
 	mock.Mock
 }
@@ -104,4 +133,9 @@ func (m *MockProductRepository) InsertProduct(product *entities.Product) (*entit
 func (m *MockProductRepository) GetAllProduct() ([]entities.Product, error) {
 	args := m.Called()
 	return args.Get(0).([]entities.Product), args.Error(1)
+}
+
+func (m *MockProductRepository) GetProductById(id int) (*entities.Product, error) {
+	args := m.Called(id)
+	return args.Get(0).(*entities.Product), args.Error(1)
 }
