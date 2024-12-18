@@ -15,7 +15,7 @@ type httpProductHandler struct {
 	usecase usecase.ProductUsecase
 }
 
-func NewUserHandler(usecase usecase.ProductUsecase) *httpProductHandler {
+func NewProductHandler(usecase usecase.ProductUsecase) *httpProductHandler {
 	return &httpProductHandler{usecase}
 }
 
@@ -71,8 +71,12 @@ func (h *httpProductHandler) GetAllProducts(c echo.Context) error {
 
 func (h *httpProductHandler) GetProductById(c echo.Context) error {
 	productId := c.Param("id")
-	id, _ := strconv.Atoi(productId)
+	id64, err := strconv.ParseUint(productId, 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, ErrorResponse{Message: "invalid product ID"})
+	}
 
+	id := uint(id64)
 	products, err := h.usecase.GetProductById(id)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, ErrorResponse{Message: "internal server error"})
