@@ -21,7 +21,7 @@ func TestCreateNewProduct(t *testing.T) {
 		e := echo.New()
 		defer e.Close()
 
-		mockService.On("CreateNewProduct", mock.AnythingOfType("*entities.Product")).Return(&entities.Product{Name: "Customizable Art Toy", Description: "A fully customizable art toy.", Price: 20.0, Stock: 100}, nil)
+		mockService.On("CreateNewProduct", mock.AnythingOfType("*entities.Product")).Return(&entities.ProductResponse{ID: uint(30), Name: "Customizable Art Toy", Description: "A fully customizable art toy.", Price: 20.0, ImageURL: "https://example.com/images/dimoo-starry-night.jpg"}, nil)
 
 		body := `{"name": "Dimoo Starry Night", "description": "Dimoo inspired by Van Gogh's 'Starry Night,' featuring a dreamy and artistic design.", "price": 49.99, "stock": 25, "image_url": "https://example.com/images/dimoo-starry-night.jpg", "active": true}`
 		request := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(body))
@@ -31,7 +31,7 @@ func TestCreateNewProduct(t *testing.T) {
 
 		err := handler.CreateNewProduct(c)
 
-		expectedJSON := `{"name": "Customizable Art Toy", "description": "A fully customizable art toy.", "price": 20.0, "stock": 100, "image_url": "", "active": false, "ID": 0, "CreatedAt": "0001-01-01T00:00:00Z", "UpdatedAt": "0001-01-01T00:00:00Z", "DeletedAt": null}`
+		expectedJSON := `{"id": 30, "name": "Customizable Art Toy", "description": "A fully customizable art toy.", "price": 20.0, "image_url": "https://example.com/images/dimoo-starry-night.jpg"}`
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusCreated, response.Code)
 		assert.JSONEq(t, expectedJSON, response.Body.String())
@@ -45,7 +45,7 @@ func TestCreateNewProduct(t *testing.T) {
 		e := echo.New()
 		defer e.Close()
 
-		mockService.On("CreateNewProduct", mock.AnythingOfType("*entities.Product")).Return(&entities.Product{Name: "Customizable Art Toy", Description: "A fully customizable art toy.", Price: 20.0, Stock: 100}, nil)
+		mockService.On("CreateNewProduct", mock.AnythingOfType("*entities.Product")).Return((*entities.ProductResponse)(nil), nil)
 
 		body := `{hello!}`
 		request := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(body))
@@ -66,7 +66,7 @@ func TestCreateNewProduct(t *testing.T) {
 		e := echo.New()
 		defer e.Close()
 
-		mockService.On("CreateNewProduct", mock.AnythingOfType("*entities.Product")).Return(&entities.Product{Name: "Customizable Art Toy", Description: "A fully customizable art toy.", Price: 20.0, Stock: 100}, nil)
+		mockService.On("CreateNewProduct", mock.AnythingOfType("*entities.Product")).Return((*entities.ProductResponse)(nil), nil)
 
 		body := `{"name": "Customizable Art Toy"}`
 		request := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(body))
@@ -87,7 +87,7 @@ func TestCreateNewProduct(t *testing.T) {
 		e := echo.New()
 		defer e.Close()
 
-		mockService.On("CreateNewProduct", mock.AnythingOfType("*entities.Product")).Return((*entities.Product)(nil), errors.New("internal server error"))
+		mockService.On("CreateNewProduct", mock.AnythingOfType("*entities.Product")).Return((*entities.ProductResponse)(nil), errors.New("internal server error"))
 
 		body := `{"name": "Dimoo Starry Night", "description": "Dimoo inspired by Van Gogh's 'Starry Night,' featuring a dreamy and artistic design.", "price": 49.99, "stock": 25, "image_url": "https://example.com/images/dimoo-starry-night.jpg", "active": true}`
 		request := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(body))
@@ -110,9 +110,9 @@ func TestGetAllProducts(t *testing.T) {
 		e := echo.New()
 		defer e.Close()
 
-		products := []entities.Product{
-			{Name: "Dimoo Starry Night", Description: "Dimoo inspired by Van Gogh's 'Starry Night,' featuring a dreamy and artistic design.", Price: 49.99, Stock: 25, ImageURL: "https://example.com/images/dimoo-starry-night.jpg", Active: true},
-			{Name: "Pucky Forest Fairy", Description: "A magical art toy figure from Pucky, with a whimsical forest fairy design.", Price: 44.99, Stock: 40, ImageURL: "https://example.com/images/pucky-forest-fairy.jpg", Active: true},
+		products := []entities.ProductResponse{
+			{ID: uint(13), Name: "Dimoo Starry Night", Description: "Dimoo inspired by Van Gogh's 'Starry Night,' featuring a dreamy and artistic design.", Price: 49.99, ImageURL: "https://example.com/images/dimoo-starry-night.jpg"},
+			{ID: uint(14), Name: "Pucky Forest Fairy", Description: "A magical art toy figure from Pucky, with a whimsical forest fairy design.", Price: 44.99, ImageURL: "https://example.com/images/pucky-forest-fairy.jpg"},
 		}
 
 		mockService.On("GetAllProducts").Return(products, nil)
@@ -123,7 +123,9 @@ func TestGetAllProducts(t *testing.T) {
 
 		err := handler.GetAllProducts(c)
 
-		expectedJSON := `[{"CreatedAt":"0001-01-01T00:00:00Z","DeletedAt":null,"ID":0,"UpdatedAt":"0001-01-01T00:00:00Z","active":true,"description":"Dimoo inspired by Van Gogh's 'Starry Night,' featuring a dreamy and artistic design.","image_url":"https://example.com/images/dimoo-starry-night.jpg","name":"Dimoo Starry Night","price":49.99,"stock":25},{"CreatedAt":"0001-01-01T00:00:00Z","DeletedAt":null,"ID":0,"UpdatedAt":"0001-01-01T00:00:00Z","active":true,"description":"A magical art toy figure from Pucky, with a whimsical forest fairy design.","image_url":"https://example.com/images/pucky-forest-fairy.jpg","name":"Pucky Forest Fairy","price":44.99,"stock":40}]`
+		expectedJSON := `[{"id":13,"description":"Dimoo inspired by Van Gogh's 'Starry Night,' featuring a dreamy and artistic design.","image_url":"https://example.com/images/dimoo-starry-night.jpg","name":"Dimoo Starry Night","price":49.99},
+  			{"id":14,"description":"A magical art toy figure from Pucky, with a whimsical forest fairy design.","image_url":"https://example.com/images/pucky-forest-fairy.jpg","name":"Pucky Forest Fairy","price":44.99}]`
+
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, response.Code)
 		assert.JSONEq(t, expectedJSON, response.Body.String())
@@ -137,7 +139,7 @@ func TestGetAllProducts(t *testing.T) {
 		e := echo.New()
 		defer e.Close()
 
-		mockService.On("GetAllProducts").Return(([]entities.Product)(nil), errors.New("database error"))
+		mockService.On("GetAllProducts").Return(([]entities.ProductResponse)(nil), errors.New("database error"))
 
 		request := httptest.NewRequest(http.MethodGet, "/", nil)
 		response := httptest.NewRecorder()
@@ -158,8 +160,8 @@ func TestGetProductById(t *testing.T) {
 		e := echo.New()
 		defer e.Close()
 
-		product := &entities.Product{Name: "Pucky Forest Fairy", Description: "A magical art toy figure from Pucky, with a whimsical forest fairy design.", Price: 44.99, Stock: 40, ImageURL: "https://example.com/images/pucky-forest-fairy.jpg", Active: true}
-		mockService.On("GetProductById", uint(12)).Return(product, nil)
+		product := &entities.ProductResponse{ID: uint(12), Name: "Pucky Forest Fairy", Description: "A magical art toy figure from Pucky, with a whimsical forest fairy design.", Price: 44.99, ImageURL: "https://example.com/images/pucky-forest-fairy.jpg"}
+		mockService.On("GetProductById", "12").Return(product, nil)
 
 		request := httptest.NewRequest(http.MethodGet, "/", nil)
 		response := httptest.NewRecorder()
@@ -169,31 +171,10 @@ func TestGetProductById(t *testing.T) {
 
 		err := handler.GetProductById(c)
 
-		expectedJSON := `{"CreatedAt":"0001-01-01T00:00:00Z","DeletedAt":null,"ID":0,"UpdatedAt":"0001-01-01T00:00:00Z","active":true,"description":"A magical art toy figure from Pucky, with a whimsical forest fairy design.","image_url":"https://example.com/images/pucky-forest-fairy.jpg","name":"Pucky Forest Fairy","price":44.99,"stock":40}`
+		expectedJSON := `{"id":12,"description":"A magical art toy figure from Pucky, with a whimsical forest fairy design.","image_url":"https://example.com/images/pucky-forest-fairy.jpg","name":"Pucky Forest Fairy","price":44.99}`
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, response.Code)
 		assert.JSONEq(t, expectedJSON, response.Body.String())
-	})
-
-	t.Run("get product by id with invalid product ID", func(t *testing.T) {
-		mockService := new(MockProductUsecase)
-		handler := &httpProductHandler{usecase: mockService}
-
-		e := echo.New()
-		defer e.Close()
-
-		mockService.On("GetProductById", uint(0)).Return((*entities.Product)(nil), nil)
-
-		request := httptest.NewRequest(http.MethodGet, "/", nil)
-		response := httptest.NewRecorder()
-		c := e.NewContext(request, response)
-		c.SetParamNames("id")
-		c.SetParamValues("hello")
-
-		err := handler.GetProductById(c)
-
-		assert.NoError(t, err)
-		assert.Equal(t, http.StatusBadRequest, response.Code)
 	})
 
 	t.Run("get product by id with error", func(t *testing.T) {
@@ -203,7 +184,7 @@ func TestGetProductById(t *testing.T) {
 		e := echo.New()
 		defer e.Close()
 
-		mockService.On("GetProductById", uint(12)).Return((*entities.Product)(nil), errors.New("database error"))
+		mockService.On("GetProductById", "12").Return((*entities.ProductResponse)(nil), errors.New("database error"))
 
 		request := httptest.NewRequest(http.MethodGet, "/", nil)
 		response := httptest.NewRecorder()
@@ -222,17 +203,22 @@ type MockProductUsecase struct {
 	mock.Mock
 }
 
-func (m *MockProductUsecase) CreateNewProduct(product *entities.Product) (*entities.Product, error) {
+func (m *MockProductUsecase) CreateNewProduct(product *entities.Product) (*entities.ProductResponse, error) {
 	args := m.Called(product)
-	return args.Get(0).(*entities.Product), args.Error(1)
+	return args.Get(0).(*entities.ProductResponse), args.Error(1)
 }
 
-func (m *MockProductUsecase) GetAllProducts() ([]entities.Product, error) {
+func (m *MockProductUsecase) GetAllProducts() ([]entities.ProductResponse, error) {
 	args := m.Called()
-	return args.Get(0).([]entities.Product), args.Error(1)
+	return args.Get(0).([]entities.ProductResponse), args.Error(1)
 }
 
-func (m *MockProductUsecase) GetProductById(id uint) (*entities.Product, error) {
+func (m *MockProductUsecase) GetProductById(id string) (*entities.ProductResponse, error) {
 	args := m.Called(id)
-	return args.Get(0).(*entities.Product), args.Error(1)
+	return args.Get(0).(*entities.ProductResponse), args.Error(1)
+}
+
+func (m *MockProductUsecase) UpdateProduct(product *entities.Product, id string) (*entities.ProductResponse, error) {
+	args := m.Called(product, id)
+	return args.Get(0).(*entities.ProductResponse), args.Error(1)
 }

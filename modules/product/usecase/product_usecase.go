@@ -7,9 +7,10 @@ import (
 )
 
 type ProductUsecase interface {
-	CreateNewProduct(product *entities.Product) (*entities.Product, error)
-	GetAllProducts() ([]entities.Product, error)
-	GetProductById(id uint) (*entities.Product, error)
+	CreateNewProduct(product *entities.Product) (*entities.ProductResponse, error)
+	GetAllProducts() ([]entities.ProductResponse, error)
+	GetProductById(id string) (*entities.ProductResponse, error)
+	UpdateProduct(product *entities.Product, id string) (*entities.ProductResponse, error)
 }
 
 type ProductService struct {
@@ -20,30 +21,53 @@ func NewProductService(repo ProductRepository) ProductUsecase {
 	return &ProductService{repo}
 }
 
-func (s *ProductService) CreateNewProduct(product *entities.Product) (*entities.Product, error) {
+func (s *ProductService) CreateNewProduct(product *entities.Product) (*entities.ProductResponse, error) {
 	newProduct, err := s.repo.InsertProduct(product)
 	if err != nil {
-		return nil, errors.New("insert product repo is error")
+		return nil, errors.New("database error")
 	}
 
-	return newProduct, nil
+	return &entities.ProductResponse{
+		ID:          newProduct.ID,
+		Name:        newProduct.Name,
+		Description: newProduct.Description,
+		Price:       newProduct.Price,
+		ImageURL:    newProduct.ImageURL,
+	}, nil
 
 }
 
-func (s *ProductService) GetAllProducts() ([]entities.Product, error) {
+func (s *ProductService) GetAllProducts() ([]entities.ProductResponse, error) {
 	products, err := s.repo.GetAllProduct()
 	if err != nil {
 		return nil, errors.New("database error")
 	}
 
-	return products, nil
+	var productList []entities.ProductResponse
+	for _, product := range products {
+		productList = append(productList, entities.ProductResponse{
+			ID:          product.ID,
+			Name:        product.Name,
+			Description: product.Description,
+			Price:       product.Price,
+			ImageURL:    product.ImageURL,
+		})
+	}
+
+	return productList, nil
 }
 
-func (s *ProductService) GetProductById(productId uint) (*entities.Product, error) {
+func (s *ProductService) GetProductById(productId string) (*entities.ProductResponse, error) {
 	product, err := s.repo.GetProductById(productId)
 	if err != nil {
 		return nil, errors.New("database error")
 	}
 
-	return product, nil
+	return &entities.ProductResponse{
+		ID:          product.ID,
+		Name:        product.Name,
+		Description: product.Description,
+		Price:       product.Price,
+		ImageURL:    product.ImageURL,
+	}, nil
 }

@@ -33,7 +33,7 @@ func (r *gormProductRepository) GetAllProduct() ([]entities.Product, error) {
 	return products, nil
 }
 
-func (r *gormProductRepository) GetProductById(id uint) (*entities.Product, error) {
+func (r *gormProductRepository) GetProductById(id string) (*entities.Product, error) {
 	product := new(entities.Product)
 
 	if err := r.db.First(&product, id).Error; err != nil {

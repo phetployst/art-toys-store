@@ -3,7 +3,6 @@ package adapters
 import (
 	"log"
 	"net/http"
-	"strconv"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v4"
@@ -70,13 +69,8 @@ func (h *httpProductHandler) GetAllProducts(c echo.Context) error {
 }
 
 func (h *httpProductHandler) GetProductById(c echo.Context) error {
-	productId := c.Param("id")
-	id64, err := strconv.ParseUint(productId, 10, 32)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, ErrorResponse{Message: "invalid product ID"})
-	}
+	id := c.Param("id")
 
-	id := uint(id64)
 	products, err := h.usecase.GetProductById(id)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, ErrorResponse{Message: "internal server error"})

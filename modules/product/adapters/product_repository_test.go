@@ -140,10 +140,10 @@ func TestGetProductById_gormRepo(t *testing.T) {
 		}).AddRow(1, "Dimoo Starry Night", "Dimoo inspired by Van Gogh's 'Starry Night,' featuring a dreamy and artistic design.", 49.99, 25, "https://example.com/images/dimoo-starry-night.jpg", true)
 
 		mock.ExpectQuery(getProductByIdQuery).
-			WithArgs(uint(1), 1).
+			WithArgs("1", 1).
 			WillReturnRows(rows)
 
-		got, err := repo.GetProductById(uint(1))
+		got, err := repo.GetProductById("1")
 
 		assert.NoError(t, err)
 
@@ -170,10 +170,10 @@ func TestGetProductById_gormRepo(t *testing.T) {
 		repo := NewProductRepository(gormDB)
 
 		mock.ExpectQuery(getProductByIdQuery).
-			WithArgs(uint(1), 1).
+			WithArgs("1", 1).
 			WillReturnError(errors.New("database error"))
 
-		got, err := repo.GetProductById(uint(1))
+		got, err := repo.GetProductById("1")
 
 		assert.Error(t, err)
 		assert.Nil(t, got)
