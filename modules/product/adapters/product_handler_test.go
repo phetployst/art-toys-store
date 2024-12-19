@@ -199,6 +199,103 @@ func TestGetProductById(t *testing.T) {
 	})
 }
 
+func TestUpdateProduct(t *testing.T) {
+	t.Run("update product given valid input should be successful", func(t *testing.T) {
+		mockService := new(MockProductUsecase)
+		handler := &httpProductHandler{usecase: mockService}
+
+		e := echo.New()
+		defer e.Close()
+
+		mockService.On("UpdateProduct", mock.AnythingOfType("*entities.Product"), "30").Return(&entities.ProductResponse{ID: uint(30), Name: "Customizable Art Toy", Description: "A fully customizable art toy.", Price: 20.0, ImageURL: "https://example.com/images/dimoo-starry-night.jpg"}, nil)
+
+		body := `{"name": "Dimoo Starry Night", "description": "Dimoo inspired by Van Gogh's 'Starry Night,' featuring a dreamy and artistic design.", "price": 49.99, "stock": 25, "image_url": "https://example.com/images/dimoo-starry-night.jpg", "active": true}`
+		request := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(body))
+		request.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		response := httptest.NewRecorder()
+		c := e.NewContext(request, response)
+		c.SetParamNames("id")
+		c.SetParamValues("30")
+
+		err := handler.UpdateProduct(c)
+
+		expectedJSON := `{"id": 30, "name": "Customizable Art Toy", "description": "A fully customizable art toy.", "price": 20.0, "image_url": "https://example.com/images/dimoo-starry-night.jpg"}`
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusCreated, response.Code)
+		assert.JSONEq(t, expectedJSON, response.Body.String())
+
+	})
+
+	t.Run("update product given error during binding", func(t *testing.T) {
+		mockService := new(MockProductUsecase)
+		handler := &httpProductHandler{usecase: mockService}
+
+		e := echo.New()
+		defer e.Close()
+
+		mockService.On("UpdateProduct", mock.AnythingOfType("*entities.Product"), "18").Return((*entities.ProductResponse)(nil), nil)
+
+		body := `{hello!}`
+		request := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(body))
+		request.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		response := httptest.NewRecorder()
+		c := e.NewContext(request, response)
+		c.SetParamNames("id")
+		c.SetParamValues("18")
+
+		err := handler.UpdateProduct(c)
+
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusBadRequest, response.Code)
+	})
+
+	t.Run("create new product given invalid input", func(t *testing.T) {
+		mockService := new(MockProductUsecase)
+		handler := &httpProductHandler{usecase: mockService}
+
+		e := echo.New()
+		defer e.Close()
+
+		mockService.On("UpdateProduct", mock.AnythingOfType("*entities.Product"), "19").Return((*entities.ProductResponse)(nil), nil)
+
+		body := `{"name": "Customizable Art Toy"}`
+		request := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(body))
+		request.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		response := httptest.NewRecorder()
+		c := e.NewContext(request, response)
+		c.SetParamNames("id")
+		c.SetParamValues("19")
+
+		err := handler.UpdateProduct(c)
+
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusBadRequest, response.Code)
+	})
+
+	t.Run("create new product given internal server error", func(t *testing.T) {
+		mockService := new(MockProductUsecase)
+		handler := &httpProductHandler{usecase: mockService}
+
+		e := echo.New()
+		defer e.Close()
+
+		mockService.On("UpdateProduct", mock.AnythingOfType("*entities.Product"), "20").Return((*entities.ProductResponse)(nil), errors.New("internal server error"))
+
+		body := `{"name": "Dimoo Starry Night", "description": "Dimoo inspired by Van Gogh's 'Starry Night,' featuring a dreamy and artistic design.", "price": 49.99, "stock": 25, "image_url": "https://example.com/images/dimoo-starry-night.jpg", "active": true}`
+		request := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(body))
+		request.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		response := httptest.NewRecorder()
+		c := e.NewContext(request, response)
+		c.SetParamNames("id")
+		c.SetParamValues("20")
+
+		err := handler.UpdateProduct(c)
+
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusInternalServerError, response.Code)
+	})
+}
+
 type MockProductUsecase struct {
 	mock.Mock
 }

@@ -71,3 +71,18 @@ func (s *ProductService) GetProductById(productId string) (*entities.ProductResp
 		ImageURL:    product.ImageURL,
 	}, nil
 }
+
+func (s *ProductService) UpdateProduct(product *entities.Product, id string) (*entities.ProductResponse, error) {
+	productUpdated, err := s.repo.UpdateProduct(product, id)
+	if err != nil {
+		return nil, errors.New("database error")
+	}
+
+	return &entities.ProductResponse{
+		ID:          productUpdated.ID,
+		Name:        productUpdated.Name,
+		Description: productUpdated.Description,
+		Price:       productUpdated.Price,
+		ImageURL:    productUpdated.ImageURL,
+	}, nil
+}

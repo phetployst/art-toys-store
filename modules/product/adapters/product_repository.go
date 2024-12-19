@@ -42,3 +42,12 @@ func (r *gormProductRepository) GetProductById(id string) (*entities.Product, er
 
 	return product, nil
 }
+
+func (r *gormProductRepository) UpdateProduct(product *entities.Product, id string) (*entities.Product, error) {
+	if result := r.db.Model(&entities.Product{}).
+		Where("id = ?", id).
+		Updates(product); result.Error != nil {
+		return nil, result.Error
+	}
+	return product, nil
+}

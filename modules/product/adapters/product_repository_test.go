@@ -17,6 +17,7 @@ const (
 	insertProductQuery  = `INSERT INTO "products" ("created_at","updated_at","deleted_at","name","description","price","stock","image_url","active") VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING "id"`
 	getAllProductQuery  = `SELECT * FROM "products" WHERE "products"."deleted_at" IS NULL`
 	getProductByIdQuery = `SELECT * FROM "products" WHERE "products"."id" = $1 AND "products"."deleted_at" IS NULL ORDER BY "products"."id" LIMIT $2`
+	updateProductQuery  = `UPDATE "products" SET "updated_at"=$1,"name"=$2,"description"=$3,"price"=$4,"stock"=$5,"image_url"=$6,"active"=$7 WHERE id = $8 AND "products"."deleted_at" IS NULL`
 )
 
 func TestInsertProduct_gormRepo(t *testing.T) {
@@ -177,5 +178,55 @@ func TestGetProductById_gormRepo(t *testing.T) {
 
 		assert.Error(t, err)
 		assert.Nil(t, got)
+	})
+}
+
+func TestUpdateProduct_gormRepo(t *testing.T) {
+	t.Run("successfully updates product", func(t *testing.T) {
+		db, mock, _ := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
+		defer db.Close()
+
+		gormDB, _ := gorm.Open(postgres.New(postgres.Config{Conn: db}), &gorm.Config{})
+		repo := NewProductRepository(gormDB)
+
+		updateInput := &entities.Product{Name: "Updated Product Name", Description: "Updated Description", Price: 99.99, Stock: 50,
+			ImageURL: "https://example.com/images/updated-product.jpg", Active: true}
+
+		mock.ExpectBegin()
+
+		mock.ExpectExec(updateProductQuery).
+			WithArgs(sqlmock.AnyArg(), updateInput.Name, updateInput.Description, updateInput.Price, updateInput.Stock, updateInput.ImageURL, updateInput.Active, "12").
+			WillReturnResult(sqlmock.NewResult(0, 1))
+
+		mock.ExpectCommit()
+
+		got, err := repo.UpdateProduct(updateInput, "12")
+
+		assert.NoError(t, err)
+
+		if !reflect.DeepEqual(got, updateInput) {
+			t.Errorf("got %v but want %v", got, updateInput)
+		}
+
+	})
+
+	t.Run("database error during query", func(t *testing.T) {
+		db, mock, _ := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
+		defer db.Close()
+
+		gormDB, _ := gorm.Open(postgres.New(postgres.Config{Conn: db}), &gorm.Config{})
+		repo := NewProductRepository(gormDB)
+
+		updateInput := &entities.Product{Name: "Updated Product Name", Description: "Updated Description", Price: 99.99, Stock: 50,
+			ImageURL: "https://example.com/images/updated-product.jpg", Active: true}
+
+		mock.ExpectExec(updateProductQuery).
+			WithArgs(sqlmock.AnyArg(), updateInput.Name, updateInput.Description, updateInput.Price, updateInput.Stock, updateInput.ImageURL, updateInput.Active, "20").
+			WillReturnError(errors.New("database error"))
+
+		updatedProfile, err := repo.UpdateProduct(updateInput, "20")
+
+		assert.Error(t, err)
+		assert.Nil(t, updatedProfile)
 	})
 }

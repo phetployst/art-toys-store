@@ -78,3 +78,29 @@ func (h *httpProductHandler) GetProductById(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, products)
 }
+
+func (h *httpProductHandler) UpdateProduct(c echo.Context) error {
+	product := new(entities.Product)
+	id := c.Param("id")
+
+	validator := validator.New()
+	c.Echo().Validator = &CustomValidator{validator: validator}
+
+	if err := c.Bind(&product); err != nil {
+		log.Printf("failed to bind input %v", err)
+		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid request data"})
+	}
+
+	if err := c.Validate(product); err != nil {
+		log.Printf("failed to validate input %v", err)
+		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "request data validation failed"})
+	}
+
+	productUpdate, err := h.usecase.UpdateProduct(product, id)
+	if err != nil {
+		log.Printf("failed to create new user: %v", err)
+		return c.JSON(http.StatusInternalServerError, ErrorResponse{Message: "internal server error"})
+	}
+
+	return c.JSON(http.StatusCreated, productUpdate)
+}

@@ -157,3 +157,50 @@ func (m *MockProductRepository) UpdateProduct(product *entities.Product, id stri
 	args := m.Called(product, id)
 	return args.Get(0).(*entities.Product), args.Error(1)
 }
+
+func TestUpdateProduct(t *testing.T) {
+	t.Run("update product successfully", func(t *testing.T) {
+		mockRepo := new(MockProductRepository)
+		productService := ProductService{repo: mockRepo}
+
+		productUpdate := &entities.Product{
+			Name: "Molly Classic 2", Description: "The iconic Molly figure, loved by art toy collectors worldwide.",
+			Price: 440.99, Stock: 30, ImageURL: "https://example.com/images/molly-classic.jpg", Active: true,
+		}
+
+		mockRepo.On("UpdateProduct", mock.AnythingOfType("*entities.Product"), "12").Return(productUpdate, nil)
+
+		got, err := productService.UpdateProduct(productUpdate, "12")
+
+		want := &entities.ProductResponse{
+			ID:          uint(0),
+			Name:        "Molly Classic 2",
+			Description: "The iconic Molly figure, loved by art toy collectors worldwide.",
+			Price:       440.99,
+			ImageURL:    "https://example.com/images/molly-classic.jpg",
+		}
+
+		assert.NoError(t, err)
+
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("got %v but want %v", got, want)
+		}
+	})
+
+	t.Run("update product error during query", func(t *testing.T) {
+		mockRepo := new(MockProductRepository)
+		productService := ProductService{repo: mockRepo}
+
+		newProduct := &entities.Product{
+			Name: "Skull Panda Rebel", Description: "A rebellious design from Skull Panda, combining gothic aesthetics with modern art.",
+			Price: 59.99, Stock: 15, ImageURL: "https://example.com/images/skull-panda-rebel.jpg", Active: true,
+		}
+
+		mockRepo.On("UpdateProduct", mock.AnythingOfType("*entities.Product"), "1").Return((*entities.Product)(nil), errors.New("databse error"))
+
+		_, err := productService.UpdateProduct(newProduct, "1")
+
+		assert.Error(t, err)
+		assert.EqualError(t, err, "database error")
+	})
+}
