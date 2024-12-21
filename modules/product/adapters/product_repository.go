@@ -1,9 +1,12 @@
 package adapters
 
 import (
+	"errors"
+
 	"github.com/phetployst/art-toys-store/modules/product/entities"
 	"github.com/phetployst/art-toys-store/modules/product/usecase"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type gormProductRepository struct {
@@ -50,4 +53,40 @@ func (r *gormProductRepository) UpdateProduct(product *entities.Product, id stri
 		return nil, result.Error
 	}
 	return product, nil
+}
+
+func (r *gormProductRepository) UpdateStock(id string, count int) (int, error) {
+	var newStock int
+
+	err := r.db.Transaction(func(tx *gorm.DB) error {
+		product := &entities.Product{}
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(product, "id = ?", id).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return errors.New("product not found")
+			}
+			return errors.New("failed to retrieve product")
+		}
+
+		if product.Stock < count {
+			return errors.New("insufficient stock")
+		}
+
+		newStock = product.Stock - count
+
+		updates := map[string]interface{}{
+			"stock":  newStock,
+			"active": newStock > 0,
+		}
+		if err := tx.Model(product).Updates(updates).Error; err != nil {
+			return errors.New("failed to update product stock")
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return 0, err
+	}
+
+	return newStock, nil
 }

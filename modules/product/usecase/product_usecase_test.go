@@ -133,31 +133,6 @@ func TestGetProductById(t *testing.T) {
 		assert.EqualError(t, err, "database error")
 	})
 }
-
-type MockProductRepository struct {
-	mock.Mock
-}
-
-func (m *MockProductRepository) InsertProduct(product *entities.Product) (*entities.Product, error) {
-	args := m.Called(product)
-	return args.Get(0).(*entities.Product), args.Error(1)
-}
-
-func (m *MockProductRepository) GetAllProduct() ([]entities.Product, error) {
-	args := m.Called()
-	return args.Get(0).([]entities.Product), args.Error(1)
-}
-
-func (m *MockProductRepository) GetProductById(id string) (*entities.Product, error) {
-	args := m.Called(id)
-	return args.Get(0).(*entities.Product), args.Error(1)
-}
-
-func (m *MockProductRepository) UpdateProduct(product *entities.Product, id string) (*entities.Product, error) {
-	args := m.Called(product, id)
-	return args.Get(0).(*entities.Product), args.Error(1)
-}
-
 func TestUpdateProduct(t *testing.T) {
 	t.Run("update product successfully", func(t *testing.T) {
 		mockRepo := new(MockProductRepository)
@@ -203,4 +178,90 @@ func TestUpdateProduct(t *testing.T) {
 		assert.Error(t, err)
 		assert.EqualError(t, err, "database error")
 	})
+}
+
+func TestDeductStockt(t *testing.T) {
+	t.Run("reduce product stock successfull", func(t *testing.T) {
+		mockRepo := new(MockProductRepository)
+		productService := ProductService{repo: mockRepo}
+
+		mockRepo.On("UpdateStock", "1", 2).Return(18, nil)
+
+		got, err := productService.DeductStock("1", &entities.CountProduct{Count: 2})
+
+		want := &entities.CountProduct{
+			Count: 18,
+		}
+
+		assert.NoError(t, err)
+
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("got %v but want %v", got, want)
+		}
+	})
+
+	t.Run("reduce product stock successfull", func(t *testing.T) {
+		mockRepo := new(MockProductRepository)
+		productService := ProductService{repo: mockRepo}
+
+		mockRepo.On("UpdateStock", "12", 2).Return(0, errors.New("product not found"))
+
+		_, err := productService.DeductStock("12", &entities.CountProduct{Count: 2})
+
+		assert.Error(t, err)
+		assert.EqualError(t, err, "product not found")
+	})
+
+	t.Run("reduce product stock successfull", func(t *testing.T) {
+		mockRepo := new(MockProductRepository)
+		productService := ProductService{repo: mockRepo}
+
+		mockRepo.On("UpdateStock", "12", 2).Return(0, errors.New("insufficient stock"))
+
+		_, err := productService.DeductStock("12", &entities.CountProduct{Count: 2})
+
+		assert.Error(t, err)
+		assert.EqualError(t, err, "insufficient stock")
+	})
+
+	t.Run("reduce product stock successfull", func(t *testing.T) {
+		mockRepo := new(MockProductRepository)
+		productService := ProductService{repo: mockRepo}
+
+		mockRepo.On("UpdateStock", "12", 2).Return(0, errors.New("database error"))
+
+		_, err := productService.DeductStock("12", &entities.CountProduct{Count: 2})
+
+		assert.Error(t, err)
+		assert.EqualError(t, err, "database error")
+	})
+}
+
+type MockProductRepository struct {
+	mock.Mock
+}
+
+func (m *MockProductRepository) InsertProduct(product *entities.Product) (*entities.Product, error) {
+	args := m.Called(product)
+	return args.Get(0).(*entities.Product), args.Error(1)
+}
+
+func (m *MockProductRepository) GetAllProduct() ([]entities.Product, error) {
+	args := m.Called()
+	return args.Get(0).([]entities.Product), args.Error(1)
+}
+
+func (m *MockProductRepository) GetProductById(id string) (*entities.Product, error) {
+	args := m.Called(id)
+	return args.Get(0).(*entities.Product), args.Error(1)
+}
+
+func (m *MockProductRepository) UpdateProduct(product *entities.Product, id string) (*entities.Product, error) {
+	args := m.Called(product, id)
+	return args.Get(0).(*entities.Product), args.Error(1)
+}
+
+func (m *MockProductRepository) UpdateStock(id string, count int) (int, error) {
+	args := m.Called(id, count)
+	return args.Get(0).(int), args.Error(1)
 }

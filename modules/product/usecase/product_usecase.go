@@ -11,6 +11,7 @@ type ProductUsecase interface {
 	GetAllProducts() ([]entities.ProductResponse, error)
 	GetProductById(id string) (*entities.ProductResponse, error)
 	UpdateProduct(product *entities.Product, id string) (*entities.ProductResponse, error)
+	DeductStock(id string, count *entities.CountProduct) (*entities.CountProduct, error)
 }
 
 type ProductService struct {
@@ -84,5 +85,22 @@ func (s *ProductService) UpdateProduct(product *entities.Product, id string) (*e
 		Description: productUpdated.Description,
 		Price:       productUpdated.Price,
 		ImageURL:    productUpdated.ImageURL,
+	}, nil
+}
+
+func (s *ProductService) DeductStock(id string, count *entities.CountProduct) (*entities.CountProduct, error) {
+
+	newStock, err := s.repo.UpdateStock(id, count.Count)
+	if err != nil {
+		if err.Error() == "product not found" {
+			return nil, errors.New("product not found")
+		} else if err.Error() == "insufficient stock" {
+			return nil, errors.New("insufficient stock")
+		}
+		return nil, errors.New("database error")
+	}
+
+	return &entities.CountProduct{
+		Count: newStock,
 	}, nil
 }

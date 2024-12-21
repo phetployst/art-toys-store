@@ -210,7 +210,7 @@ func TestUpdateProduct(t *testing.T) {
 		mockService.On("UpdateProduct", mock.AnythingOfType("*entities.Product"), "30").Return(&entities.ProductResponse{ID: uint(30), Name: "Customizable Art Toy", Description: "A fully customizable art toy.", Price: 20.0, ImageURL: "https://example.com/images/dimoo-starry-night.jpg"}, nil)
 
 		body := `{"name": "Dimoo Starry Night", "description": "Dimoo inspired by Van Gogh's 'Starry Night,' featuring a dreamy and artistic design.", "price": 49.99, "stock": 25, "image_url": "https://example.com/images/dimoo-starry-night.jpg", "active": true}`
-		request := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(body))
+		request := httptest.NewRequest(http.MethodPut, "/", strings.NewReader(body))
 		request.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 		response := httptest.NewRecorder()
 		c := e.NewContext(request, response)
@@ -236,7 +236,7 @@ func TestUpdateProduct(t *testing.T) {
 		mockService.On("UpdateProduct", mock.AnythingOfType("*entities.Product"), "18").Return((*entities.ProductResponse)(nil), nil)
 
 		body := `{hello!}`
-		request := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(body))
+		request := httptest.NewRequest(http.MethodPut, "/", strings.NewReader(body))
 		request.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 		response := httptest.NewRecorder()
 		c := e.NewContext(request, response)
@@ -259,7 +259,7 @@ func TestUpdateProduct(t *testing.T) {
 		mockService.On("UpdateProduct", mock.AnythingOfType("*entities.Product"), "19").Return((*entities.ProductResponse)(nil), nil)
 
 		body := `{"name": "Customizable Art Toy"}`
-		request := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(body))
+		request := httptest.NewRequest(http.MethodPut, "/", strings.NewReader(body))
 		request.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 		response := httptest.NewRecorder()
 		c := e.NewContext(request, response)
@@ -282,7 +282,7 @@ func TestUpdateProduct(t *testing.T) {
 		mockService.On("UpdateProduct", mock.AnythingOfType("*entities.Product"), "20").Return((*entities.ProductResponse)(nil), errors.New("internal server error"))
 
 		body := `{"name": "Dimoo Starry Night", "description": "Dimoo inspired by Van Gogh's 'Starry Night,' featuring a dreamy and artistic design.", "price": 49.99, "stock": 25, "image_url": "https://example.com/images/dimoo-starry-night.jpg", "active": true}`
-		request := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(body))
+		request := httptest.NewRequest(http.MethodPut, "/", strings.NewReader(body))
 		request.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 		response := httptest.NewRecorder()
 		c := e.NewContext(request, response)
@@ -293,6 +293,142 @@ func TestUpdateProduct(t *testing.T) {
 
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusInternalServerError, response.Code)
+	})
+}
+
+func TestDeductStock(t *testing.T) {
+	t.Run("deduct stock given valid input should be successful", func(t *testing.T) {
+		mockService := new(MockProductUsecase)
+		handler := &httpProductHandler{usecase: mockService}
+
+		e := echo.New()
+		defer e.Close()
+
+		mockService.On("DeductStock", "31", &entities.CountProduct{Count: 2}).Return(&entities.CountProduct{Count: 18}, nil)
+
+		request := httptest.NewRequest(http.MethodPut, "/", strings.NewReader(`{"count": 2}`))
+		request.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		response := httptest.NewRecorder()
+		c := e.NewContext(request, response)
+		c.SetParamNames("id")
+		c.SetParamValues("31")
+
+		err := handler.DeductStock(c)
+
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusOK, response.Code)
+		assert.JSONEq(t, `{"count": 18}`, response.Body.String())
+	})
+
+	t.Run("deduct stock given error during binding", func(t *testing.T) {
+		mockService := new(MockProductUsecase)
+		handler := &httpProductHandler{usecase: mockService}
+
+		e := echo.New()
+		defer e.Close()
+
+		request := httptest.NewRequest(http.MethodPut, "/", strings.NewReader(`{count: -1}`))
+		request.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		response := httptest.NewRecorder()
+		c := e.NewContext(request, response)
+		c.SetParamNames("id")
+		c.SetParamValues("31")
+
+		err := handler.DeductStock(c)
+
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusBadRequest, response.Code)
+		assert.JSONEq(t, `{"message":"invalid request data"}`, response.Body.String())
+	})
+
+	t.Run("deduct stock given invalid input data", func(t *testing.T) {
+		mockService := new(MockProductUsecase)
+		handler := &httpProductHandler{usecase: mockService}
+
+		e := echo.New()
+		defer e.Close()
+
+		request := httptest.NewRequest(http.MethodPut, "/", strings.NewReader(`{"count": 0}`))
+		request.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		response := httptest.NewRecorder()
+		c := e.NewContext(request, response)
+		c.SetParamNames("id")
+		c.SetParamValues("31")
+
+		err := handler.DeductStock(c)
+
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusBadRequest, response.Code)
+		assert.JSONEq(t, `{"message":"request data validation failed"}`, response.Body.String())
+	})
+
+	t.Run("deduct stock given product not found", func(t *testing.T) {
+		mockService := new(MockProductUsecase)
+		handler := &httpProductHandler{usecase: mockService}
+
+		e := echo.New()
+		defer e.Close()
+
+		mockService.On("DeductStock", "31", &entities.CountProduct{Count: 2}).Return((*entities.CountProduct)(nil), errors.New("product not found"))
+
+		request := httptest.NewRequest(http.MethodPut, "/", strings.NewReader(`{"count": 2}`))
+		request.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		response := httptest.NewRecorder()
+		c := e.NewContext(request, response)
+		c.SetParamNames("id")
+		c.SetParamValues("31")
+
+		err := handler.DeductStock(c)
+
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusNotFound, response.Code)
+		assert.JSONEq(t, `{"message":"product not found"}`, response.Body.String())
+	})
+
+	t.Run("deduct stock given insufficient stock", func(t *testing.T) {
+		mockService := new(MockProductUsecase)
+		handler := &httpProductHandler{usecase: mockService}
+
+		e := echo.New()
+		defer e.Close()
+
+		mockService.On("DeductStock", "31", &entities.CountProduct{Count: 2}).Return((*entities.CountProduct)(nil), errors.New("insufficient stock"))
+
+		request := httptest.NewRequest(http.MethodPut, "/", strings.NewReader(`{"count": 2}`))
+		request.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		response := httptest.NewRecorder()
+		c := e.NewContext(request, response)
+		c.SetParamNames("id")
+		c.SetParamValues("31")
+
+		err := handler.DeductStock(c)
+
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusBadRequest, response.Code)
+		assert.JSONEq(t, `{"message":"insufficient stock"}`, response.Body.String())
+	})
+
+	t.Run("deduct stock given internal server error", func(t *testing.T) {
+		mockService := new(MockProductUsecase)
+		handler := &httpProductHandler{usecase: mockService}
+
+		e := echo.New()
+		defer e.Close()
+
+		mockService.On("DeductStock", "31", &entities.CountProduct{Count: 2}).Return((*entities.CountProduct)(nil), errors.New("internal server error"))
+
+		request := httptest.NewRequest(http.MethodPut, "/", strings.NewReader(`{"count": 2}`))
+		request.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		response := httptest.NewRecorder()
+		c := e.NewContext(request, response)
+		c.SetParamNames("id")
+		c.SetParamValues("31")
+
+		err := handler.DeductStock(c)
+
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusInternalServerError, response.Code)
+		assert.JSONEq(t, `{"message":"internal server error"}`, response.Body.String())
 	})
 }
 
@@ -318,4 +454,9 @@ func (m *MockProductUsecase) GetProductById(id string) (*entities.ProductRespons
 func (m *MockProductUsecase) UpdateProduct(product *entities.Product, id string) (*entities.ProductResponse, error) {
 	args := m.Called(product, id)
 	return args.Get(0).(*entities.ProductResponse), args.Error(1)
+}
+
+func (m *MockProductUsecase) DeductStock(id string, count *entities.CountProduct) (*entities.CountProduct, error) {
+	args := m.Called(id, count)
+	return args.Get(0).(*entities.CountProduct), args.Error(1)
 }

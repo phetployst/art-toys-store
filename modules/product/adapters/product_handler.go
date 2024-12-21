@@ -104,3 +104,35 @@ func (h *httpProductHandler) UpdateProduct(c echo.Context) error {
 
 	return c.JSON(http.StatusCreated, productUpdate)
 }
+
+func (h *httpProductHandler) DeductStock(c echo.Context) error {
+	id := c.Param("id")
+	count := new(entities.CountProduct)
+
+	validator := validator.New()
+	c.Echo().Validator = &CustomValidator{validator: validator}
+
+	if err := c.Bind(&count); err != nil {
+		log.Printf("failed to bind input %v", err)
+		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "invalid request data"})
+	}
+
+	if err := c.Validate(count); err != nil {
+		log.Printf("failed to validate input %v", err)
+		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "request data validation failed"})
+	}
+
+	newStock, err := h.usecase.DeductStock(id, count)
+	if err != nil {
+		switch err.Error() {
+		case "product not found":
+			return c.JSON(http.StatusNotFound, ErrorResponse{Message: "product not found"})
+		case "insufficient stock":
+			return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "insufficient stock"})
+		default:
+			return c.JSON(http.StatusInternalServerError, ErrorResponse{Message: "internal server error"})
+		}
+	}
+
+	return c.JSON(http.StatusOK, newStock)
+}

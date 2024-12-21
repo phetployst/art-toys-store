@@ -7,4 +7,5 @@ type ProductRepository interface {
 	GetAllProduct() ([]entities.Product, error)
 	GetProductById(id string) (*entities.Product, error)
 	UpdateProduct(product *entities.Product, id string) (*entities.Product, error)
+	UpdateStock(id string, count int) (int, error)
 }

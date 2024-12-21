@@ -14,10 +14,12 @@ import (
 )
 
 const (
-	insertProductQuery  = `INSERT INTO "products" ("created_at","updated_at","deleted_at","name","description","price","stock","image_url","active") VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING "id"`
-	getAllProductQuery  = `SELECT * FROM "products" WHERE "products"."deleted_at" IS NULL`
-	getProductByIdQuery = `SELECT * FROM "products" WHERE "products"."id" = $1 AND "products"."deleted_at" IS NULL ORDER BY "products"."id" LIMIT $2`
-	updateProductQuery  = `UPDATE "products" SET "updated_at"=$1,"name"=$2,"description"=$3,"price"=$4,"stock"=$5,"image_url"=$6,"active"=$7 WHERE id = $8 AND "products"."deleted_at" IS NULL`
+	insertProductQuery       = `INSERT INTO "products" ("created_at","updated_at","deleted_at","name","description","price","stock","image_url","active") VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING "id"`
+	getAllProductQuery       = `SELECT * FROM "products" WHERE "products"."deleted_at" IS NULL`
+	getProductByIdQuery      = `SELECT * FROM "products" WHERE "products"."id" = $1 AND "products"."deleted_at" IS NULL ORDER BY "products"."id" LIMIT $2`
+	updateProductQuery       = `UPDATE "products" SET "updated_at"=$1,"name"=$2,"description"=$3,"price"=$4,"stock"=$5,"image_url"=$6,"active"=$7 WHERE id = $8 AND "products"."deleted_at" IS NULL`
+	getProductforUpdateQuery = `SELECT * FROM "products" WHERE id = $1 AND "products"."deleted_at" IS NULL ORDER BY "products"."id" LIMIT $2 FOR UPDATE`
+	updateStockProductQuery  = `UPDATE "products" SET "active"=$1,"stock"=$2,"updated_at"=$3 WHERE "products"."deleted_at" IS NULL AND "id" = $4`
 )
 
 func TestInsertProduct_gormRepo(t *testing.T) {
@@ -228,5 +230,121 @@ func TestUpdateProduct_gormRepo(t *testing.T) {
 
 		assert.Error(t, err)
 		assert.Nil(t, updatedProfile)
+	})
+}
+
+func TestUpdateStockProduct_gornRepo(t *testing.T) {
+	t.Run("successfully reduce stock product", func(t *testing.T) {
+		db, mock, _ := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
+		defer db.Close()
+
+		gormDB, _ := gorm.Open(postgres.New(postgres.Config{Conn: db}), &gorm.Config{})
+		repo := NewProductRepository(gormDB)
+
+		rows := sqlmock.NewRows([]string{
+			"id", "name", "description", "price", "stock", "image_url", "active",
+		}).AddRow(1, "Dimoo Starry Night", "Dimoo inspired by Van Gogh's 'Starry Night,' featuring a dreamy and artistic design.", 49.99, 20, "https://example.com/images/dimoo-starry-night.jpg", true)
+
+		mock.ExpectBegin()
+		mock.ExpectQuery(getProductforUpdateQuery).
+			WithArgs("1", 1).
+			WillReturnRows(rows)
+
+		mock.ExpectExec(updateStockProductQuery).
+			WithArgs(true, 18, sqlmock.AnyArg(), 1).
+			WillReturnResult(sqlmock.NewResult(1, 1))
+		mock.ExpectCommit()
+
+		newStock, err := repo.UpdateStock("1", 2)
+
+		assert.NoError(t, err)
+		assert.Equal(t, 18, newStock)
+	})
+
+	t.Run("product not found", func(t *testing.T) {
+		db, mock, _ := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
+		defer db.Close()
+
+		gormDB, _ := gorm.Open(postgres.New(postgres.Config{Conn: db}), &gorm.Config{})
+		repo := NewProductRepository(gormDB)
+
+		mock.ExpectBegin()
+		mock.ExpectQuery(getProductforUpdateQuery).
+			WithArgs("1", 1).
+			WillReturnError(gorm.ErrRecordNotFound)
+		mock.ExpectRollback()
+
+		_, err := repo.UpdateStock("1", 2)
+
+		assert.Error(t, err)
+		assert.Equal(t, "product not found", err.Error())
+	})
+
+	t.Run("product not found", func(t *testing.T) {
+		db, mock, _ := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
+		defer db.Close()
+
+		gormDB, _ := gorm.Open(postgres.New(postgres.Config{Conn: db}), &gorm.Config{})
+		repo := NewProductRepository(gormDB)
+
+		mock.ExpectBegin()
+		mock.ExpectQuery(getProductforUpdateQuery).
+			WithArgs("1", 1).
+			WillReturnError(errors.New("database error"))
+		mock.ExpectRollback()
+
+		_, err := repo.UpdateStock("1", 2)
+
+		assert.Error(t, err)
+		assert.Equal(t, "failed to retrieve product", err.Error())
+	})
+
+	t.Run("insufficient stock", func(t *testing.T) {
+		db, mock, _ := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
+		defer db.Close()
+
+		gormDB, _ := gorm.Open(postgres.New(postgres.Config{Conn: db}), &gorm.Config{})
+		repo := NewProductRepository(gormDB)
+
+		rows := sqlmock.NewRows([]string{
+			"id", "name", "description", "price", "stock", "image_url", "active",
+		}).AddRow(1, "Dimoo Starry Night", "Dimoo inspired by Van Gogh's 'Starry Night,' featuring a dreamy and artistic design.", 49.99, 20, "https://example.com/images/dimoo-starry-night.jpg", true)
+
+		mock.ExpectBegin()
+		mock.ExpectQuery(getProductforUpdateQuery).
+			WithArgs("1", 1).
+			WillReturnRows(rows)
+		mock.ExpectRollback()
+
+		_, err := repo.UpdateStock("1", 25)
+
+		assert.Error(t, err)
+		assert.Equal(t, "insufficient stock", err.Error())
+	})
+
+	t.Run("failed to update stock", func(t *testing.T) {
+		db, mock, _ := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
+		defer db.Close()
+
+		gormDB, _ := gorm.Open(postgres.New(postgres.Config{Conn: db}), &gorm.Config{})
+		repo := NewProductRepository(gormDB)
+
+		rows := sqlmock.NewRows([]string{
+			"id", "name", "description", "price", "stock", "image_url", "active",
+		}).AddRow(1, "Dimoo Starry Night", "Dimoo inspired by Van Gogh's 'Starry Night,' featuring a dreamy and artistic design.", 49.99, 20, "https://example.com/images/dimoo-starry-night.jpg", true)
+
+		mock.ExpectBegin()
+		mock.ExpectQuery(getProductforUpdateQuery).
+			WithArgs("1", 1).
+			WillReturnRows(rows)
+		mock.ExpectExec(updateStockProductQuery).
+			WithArgs(18, true, 1).
+			WillReturnError(errors.New("update failed"))
+		mock.ExpectRollback()
+
+		_, err := repo.UpdateStock("1", 2)
+
+		assert.Error(t, err)
+		assert.Equal(t, "failed to update product stock", err.Error())
 	})
 }
