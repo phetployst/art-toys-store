@@ -90,3 +90,19 @@ func (r *gormProductRepository) UpdateStock(id string, count int) (int, error) {
 
 	return newStock, nil
 }
+
+func (r *gormProductRepository) SearchProducts(keyword string) ([]entities.Product, error) {
+	var products []entities.Product
+
+	if err := r.db.Where("(name ILIKE ? OR description ILIKE ?) AND active = ?",
+		"%"+keyword+"%", "%"+keyword+"%", true).
+		Find(&products).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errors.New("product not found")
+		}
+
+		return nil, err
+	}
+
+	return products, nil
+}

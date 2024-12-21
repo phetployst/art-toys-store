@@ -432,6 +432,96 @@ func TestDeductStock(t *testing.T) {
 	})
 }
 
+func TestSearchProduct(t *testing.T) {
+	t.Run("search product successfully", func(t *testing.T) {
+		mockService := new(MockProductUsecase)
+		handler := &httpProductHandler{usecase: mockService}
+
+		e := echo.New()
+		defer e.Close()
+
+		products := []entities.ProductResponse{
+			{ID: uint(13), Name: "Dimoo Starry Night", Description: "Dimoo inspired by Van Gogh's 'Starry Night,' featuring a dreamy and artistic design.", Price: 49.99, ImageURL: "https://example.com/images/dimoo-starry-night.jpg"},
+			{ID: uint(14), Name: "Pucky Forest Fairy Dimoo", Description: "A magical art toy figure from Pucky, with a whimsical forest fairy design.", Price: 44.99, ImageURL: "https://example.com/images/pucky-forest-fairy.jpg"},
+		}
+
+		mockService.On("SearchProducts", "Dimoo").Return(products, nil)
+
+		request := httptest.NewRequest(http.MethodGet, "/search?keyword=Dimoo", nil)
+		response := httptest.NewRecorder()
+		c := e.NewContext(request, response)
+
+		err := handler.SearchProducts(c)
+
+		expectedJSON := `[{"id":13,"description":"Dimoo inspired by Van Gogh's 'Starry Night,' featuring a dreamy and artistic design.","image_url":"https://example.com/images/dimoo-starry-night.jpg","name":"Dimoo Starry Night","price":49.99},
+  			{"id":14,"description":"A magical art toy figure from Pucky, with a whimsical forest fairy design.","image_url":"https://example.com/images/pucky-forest-fairy.jpg","name":"Pucky Forest Fairy Dimoo","price":44.99}]`
+
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusOK, response.Code)
+		assert.JSONEq(t, expectedJSON, response.Body.String())
+
+	})
+
+	t.Run("search product given empty keyword", func(t *testing.T) {
+		mockService := new(MockProductUsecase)
+		handler := &httpProductHandler{usecase: mockService}
+
+		e := echo.New()
+		defer e.Close()
+
+		mockService.On("SearchProducts", "Dimoo").Return(([]entities.ProductResponse)(nil), errors.New("database error"))
+
+		request := httptest.NewRequest(http.MethodGet, "/", nil)
+		response := httptest.NewRecorder()
+		c := e.NewContext(request, response)
+
+		err := handler.SearchProducts(c)
+
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusBadRequest, response.Code)
+		assert.JSONEq(t, `{"message":"keyword is required"}`, response.Body.String())
+	})
+
+	t.Run("search product given product not found", func(t *testing.T) {
+		mockService := new(MockProductUsecase)
+		handler := &httpProductHandler{usecase: mockService}
+
+		e := echo.New()
+		defer e.Close()
+
+		mockService.On("SearchProducts", "Dimoo").Return(([]entities.ProductResponse)(nil), errors.New("product not found"))
+
+		request := httptest.NewRequest(http.MethodGet, "/search?keyword=Dimoo", nil)
+		response := httptest.NewRecorder()
+		c := e.NewContext(request, response)
+
+		err := handler.SearchProducts(c)
+
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusNotFound, response.Code)
+		assert.JSONEq(t, `{"message":"product not found"}`, response.Body.String())
+	})
+
+	t.Run("search product given error", func(t *testing.T) {
+		mockService := new(MockProductUsecase)
+		handler := &httpProductHandler{usecase: mockService}
+
+		e := echo.New()
+		defer e.Close()
+
+		mockService.On("SearchProducts", "Dimoo").Return(([]entities.ProductResponse)(nil), errors.New("database error"))
+
+		request := httptest.NewRequest(http.MethodGet, "/search?keyword=Dimoo", nil)
+		response := httptest.NewRecorder()
+		c := e.NewContext(request, response)
+
+		err := handler.SearchProducts(c)
+
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusInternalServerError, response.Code)
+	})
+}
+
 type MockProductUsecase struct {
 	mock.Mock
 }
@@ -459,4 +549,9 @@ func (m *MockProductUsecase) UpdateProduct(product *entities.Product, id string)
 func (m *MockProductUsecase) DeductStock(id string, count *entities.CountProduct) (*entities.CountProduct, error) {
 	args := m.Called(id, count)
 	return args.Get(0).(*entities.CountProduct), args.Error(1)
+}
+
+func (m *MockProductUsecase) SearchProducts(keyword string) ([]entities.ProductResponse, error) {
+	args := m.Called(keyword)
+	return args.Get(0).([]entities.ProductResponse), args.Error(1)
 }

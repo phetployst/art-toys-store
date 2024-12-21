@@ -136,3 +136,22 @@ func (h *httpProductHandler) DeductStock(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, newStock)
 }
+
+func (h *httpProductHandler) SearchProducts(c echo.Context) error {
+	keyword := c.QueryParam("keyword")
+	if keyword == "" {
+		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "keyword is required"})
+	}
+
+	products, err := h.usecase.SearchProducts(keyword)
+	if err != nil {
+		switch err.Error() {
+		case "product not found":
+			return c.JSON(http.StatusNotFound, ErrorResponse{Message: "product not found"})
+		default:
+			return c.JSON(http.StatusInternalServerError, ErrorResponse{Message: "internal server error"})
+		}
+	}
+
+	return c.JSON(http.StatusOK, products)
+}

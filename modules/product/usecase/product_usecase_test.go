@@ -8,6 +8,7 @@ import (
 	"github.com/phetployst/art-toys-store/modules/product/entities"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"gorm.io/gorm"
 )
 
 func TestCreateNewProduct(t *testing.T) {
@@ -237,6 +238,58 @@ func TestDeductStockt(t *testing.T) {
 	})
 }
 
+func TestSearchProduct(t *testing.T) {
+	t.Run("search product successfull", func(t *testing.T) {
+		mockRepo := new(MockProductRepository)
+		productService := ProductService{repo: mockRepo}
+
+		products := []entities.Product{
+			{Model: gorm.Model{ID: 1}, Name: "Dimoo Starry Night", Description: "Dimoo inspired by Van Gogh's 'Starry Night,' featuring a dreamy and artistic design.", Price: 49.99, Stock: 25, ImageURL: "https://example.com/images/dimoo-starry-night.jpg", Active: true},
+			{Model: gorm.Model{ID: 2}, Name: "Pucky Forest Fairy Dimoo", Description: "A magical art toy figure from Pucky, with a whimsical forest fairy design.", Price: 44.99, Stock: 40, ImageURL: "https://example.com/images/pucky-forest-fairy.jpg", Active: true},
+		}
+
+		mockRepo.On("SearchProducts", "Dimoo").Return(products, nil)
+
+		got, err := productService.SearchProducts("Dimoo")
+
+		want := []entities.ProductResponse{
+			{ID: 1, Name: "Dimoo Starry Night", Description: "Dimoo inspired by Van Gogh's 'Starry Night,' featuring a dreamy and artistic design.", Price: 49.99, ImageURL: "https://example.com/images/dimoo-starry-night.jpg"},
+			{ID: 2, Name: "Pucky Forest Fairy Dimoo", Description: "A magical art toy figure from Pucky, with a whimsical forest fairy design.", Price: 44.99, ImageURL: "https://example.com/images/pucky-forest-fairy.jpg"},
+		}
+
+		assert.NoError(t, err)
+
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("got %v but want %v", got, want)
+		}
+	})
+
+	t.Run("search product given product not found", func(t *testing.T) {
+		mockRepo := new(MockProductRepository)
+		productService := ProductService{repo: mockRepo}
+
+		mockRepo.On("SearchProducts", "Dimon").Return(([]entities.Product)(nil), errors.New("product not found"))
+
+		_, err := productService.SearchProducts("Dimon")
+
+		assert.Error(t, err)
+		assert.EqualError(t, err, "product not found")
+
+	})
+
+	t.Run("search product given database error", func(t *testing.T) {
+		mockRepo := new(MockProductRepository)
+		productService := ProductService{repo: mockRepo}
+
+		mockRepo.On("SearchProducts", "Dimon").Return(([]entities.Product)(nil), errors.New("database error"))
+
+		_, err := productService.SearchProducts("Dimon")
+
+		assert.Error(t, err)
+
+	})
+}
+
 type MockProductRepository struct {
 	mock.Mock
 }
@@ -264,4 +317,9 @@ func (m *MockProductRepository) UpdateProduct(product *entities.Product, id stri
 func (m *MockProductRepository) UpdateStock(id string, count int) (int, error) {
 	args := m.Called(id, count)
 	return args.Get(0).(int), args.Error(1)
+}
+
+func (m *MockProductRepository) SearchProducts(keyword string) ([]entities.Product, error) {
+	args := m.Called(keyword)
+	return args.Get(0).([]entities.Product), args.Error(1)
 }

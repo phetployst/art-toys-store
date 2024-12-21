@@ -12,6 +12,7 @@ type ProductUsecase interface {
 	GetProductById(id string) (*entities.ProductResponse, error)
 	UpdateProduct(product *entities.Product, id string) (*entities.ProductResponse, error)
 	DeductStock(id string, count *entities.CountProduct) (*entities.CountProduct, error)
+	SearchProducts(keyword string) ([]entities.ProductResponse, error)
 }
 
 type ProductService struct {
@@ -103,4 +104,27 @@ func (s *ProductService) DeductStock(id string, count *entities.CountProduct) (*
 	return &entities.CountProduct{
 		Count: newStock,
 	}, nil
+}
+
+func (s *ProductService) SearchProducts(keyword string) ([]entities.ProductResponse, error) {
+	products, err := s.repo.SearchProducts(keyword)
+	if err != nil {
+		if err.Error() == "product not found" {
+			return nil, errors.New("product not found")
+		}
+		return nil, err
+	}
+
+	var productList []entities.ProductResponse
+	for _, product := range products {
+		productList = append(productList, entities.ProductResponse{
+			ID:          product.ID,
+			Name:        product.Name,
+			Description: product.Description,
+			Price:       product.Price,
+			ImageURL:    product.ImageURL,
+		})
+	}
+
+	return productList, nil
 }
