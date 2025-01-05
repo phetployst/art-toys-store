@@ -14,16 +14,4 @@ type (
 		ImageURL    string  `gorm:"type:text" json:"image_url" validate:"required,url"`
 		Active      bool    `gorm:"type:boolean;default:true" json:"active"`
 	}
-
-	ProductResponse struct {
-		ID          uint    `json:"id"`
-		Name        string  `json:"name"`
-		Description string  `json:"description"`
-		Price       float64 `json:"price"`
-		ImageURL    string  `json:"image_url"`
-	}
-
-	CountProduct struct {
-		Count int `json:"count" validate:"required,gte=1"`
-	}
 )
