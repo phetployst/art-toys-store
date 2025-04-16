@@ -1,11 +1,13 @@
 package main
 
 import (
-	"fmt"
+	"context"
 	"log"
 	"os"
+	"os/signal"
 
 	"github.com/phetployst/art-toys-store/config"
+	"github.com/phetployst/art-toys-store/server"
 )
 
 func main() {
@@ -13,12 +15,22 @@ func main() {
 		log.Fatal("Error: .env path is required")
 	}
 
-	config.LoadEnvFile(os.Args[1])
+	configProvider := config.ConfigProvider{
+		Getter: &config.OsEnvGetter{},
+		Loader: &config.GodotenvLoader{},
+	}
 
-	osGetter := &config.OsEnvGetter{}
+	if err := configProvider.LoadEnvFile(os.Args[1]); err != nil {
+		log.Fatalf("Failed to load .env file from path %s: %v", os.Args[1], err)
+	}
 
-	configProvider := config.ConfigProvider{Getter: osGetter}
-	config := configProvider.GetConfig()
+	config, err := configProvider.GetConfig()
+	if err != nil {
+		log.Fatalf("Failed to load configuration: %v", err)
+	}
 
-	fmt.Println(config)
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer stop()
+
+	server.StartHTTPServer(ctx, &config)
 }
